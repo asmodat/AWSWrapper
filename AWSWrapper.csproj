@@ -2,6 +2,17 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
+    <Product>AWSWrapper</Product>
+    <Description>Amazon Web Services .NET Standard Extentions</Description>
+    <PackageId>Asmodat.AWSWrapper</PackageId>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageReleaseNotes>Release nr. 2</PackageReleaseNotes>
+    <Version>1.0.0.1</Version>
+    <PackageProjectUrl>https://github.com/asmodat/AWSWrapper</PackageProjectUrl>
+    <PackageTags>AWS, Asmodat, Amazon</PackageTags>
+    <PackageRequireLicenseAcceptance>False</PackageRequireLicenseAcceptance>
+    <Company>Asmodat</Company>
+    <Authors>Asmodat</Authors>
   </PropertyGroup>
 
   <ItemGroup>
@@ -10,7 +21,8 @@
     <PackageReference Include="AWSSDK.CloudFormation" Version="3.3.10" />
     <PackageReference Include="AWSSDK.CloudWatch" Version="3.3.6" />
     <PackageReference Include="AWSSDK.CloudWatchLogs" Version="3.3.4.6" />
-    <PackageReference Include="AWSSDK.Core" Version="3.3.21.20" />
+    <PackageReference Include="AWSSDK.Core" Version="3.3.24.3" />
+    <PackageReference Include="AWSSDK.S3" Version="3.3.18.6" />
     <PackageReference Include="AWSSDK.EC2" Version="3.3.47.3" />
     <PackageReference Include="AWSSDK.ECR" Version="3.3.3.6" />
     <PackageReference Include="AWSSDK.ECS" Version="3.3.13.1" />
@@ -24,7 +36,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Asmodat Standard\Asmodat Standard\Asmodat Standard.csproj" />
+    <ProjectReference Include="..\Asmodat Standard\Asmodat Standard\Asmodat Standard.csproj">
+      <Private>true</Private>
+    </ProjectReference>
   </ItemGroup>
 
 </Project>
