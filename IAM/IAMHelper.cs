@@ -31,13 +31,17 @@ namespace AWSWrapper.IAM
 
         public Task<CreateRoleResponse> CreateRoleAsync(
             string roleName, 
-            string description, 
+            string description,
+            string assumeRolePolicyDocument,
             string path = null, 
-            int maxSessionDuration = 12,
-            string assumeRolePolicyDocument = null,
+            int maxSessionDuration = 12*3600,
             CancellationToken cancellationToken = default(CancellationToken))
             => _IAMClient.CreateRoleAsync(
-                new CreateRoleRequest() { Description = description, RoleName = roleName, MaxSessionDuration = maxSessionDuration, AssumeRolePolicyDocument = assumeRolePolicyDocument, Path = path },
+                new CreateRoleRequest() {
+                    Description = description,
+                    RoleName = roleName,
+                    MaxSessionDuration = maxSessionDuration,
+                    AssumeRolePolicyDocument = assumeRolePolicyDocument, Path = path },
                 cancellationToken).EnsureSuccessAsync();
 
         public Task<AttachRolePolicyResponse> AttachRolePolicyAsync(
@@ -65,19 +69,17 @@ namespace AWSWrapper.IAM
             var results = new List<ManagedPolicy>();
             while ((response = await _IAMClient.ListPoliciesAsync(new ListPoliciesRequest()
             {
-                MaxItems = 100,
+                MaxItems = 1000,
                 Scope = PolicyScopeType.All,
                 OnlyAttached = onlyAttached,
                 Marker = nextToken,
                 PathPrefix = pathPrefx
             }, cancellationToken).EnsureSuccessAsync()) != null)
             {
-                if ((response.Policies?.Count ?? 0) == 0)
-                    break;
+                if(!response.Policies.IsNullOrEmpty())
+                    results.AddRange(response.Policies);
 
-                results.AddRange(response.Policies);
-
-                if (response.Marker.IsNullOrEmpty())
+                if (!response.IsTruncated)
                     break;
 
                 nextToken = response.Marker;
@@ -85,6 +87,65 @@ namespace AWSWrapper.IAM
 
             return results.ToArray();
         }
+
+        public async Task<string[]> ListRolePoliciesAsync(string roleName, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            string nextToken = null;
+            ListRolePoliciesResponse response;
+            var results = new List<string>();
+            while ((response = await _IAMClient.ListRolePoliciesAsync(new ListRolePoliciesRequest()
+            {
+                MaxItems = 1000,
+                Marker = nextToken,
+                RoleName = roleName
+            }, cancellationToken).EnsureSuccessAsync()) != null)
+            {
+                if (!response.PolicyNames.IsNullOrEmpty())
+                    results.AddRange(response.PolicyNames);
+
+                if (!response.IsTruncated)
+                    break;
+
+                nextToken = response.Marker;
+            }
+
+            return results.ToArray();
+        }
+
+        public async Task<AttachedPolicyType[]> ListAttachedRolePoliciesAsync(string roleName, string patchPrefix = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            string nextToken = null;
+            ListAttachedRolePoliciesResponse response;
+            var results = new List<AttachedPolicyType>();
+            while ((response = await _IAMClient.ListAttachedRolePoliciesAsync(new ListAttachedRolePoliciesRequest()
+            {
+                MaxItems = 1000,
+                Marker = nextToken,
+                RoleName = roleName,
+                PathPrefix = patchPrefix
+            }, cancellationToken).EnsureSuccessAsync()) != null)
+            {
+                if (!response.AttachedPolicies.IsNullOrEmpty())
+                    results.AddRange(response.AttachedPolicies);
+
+                if (!response.IsTruncated)
+                    break;
+
+                nextToken = response.Marker;
+            }
+
+            return results.ToArray();
+        }
+
+        public Task<GetRoleResponse> GetRoleAsync(string roleName, CancellationToken cancellationToken = default(CancellationToken))
+            => _IAMClient.GetRoleAsync(
+                new GetRoleRequest() { RoleName = roleName },
+                cancellationToken).EnsureSuccessAsync();
+
+        public Task<DetachRolePolicyResponse> DetachRolePolicyAsync(string roleName, string policyArn, CancellationToken cancellationToken = default(CancellationToken))
+            => _IAMClient.DetachRolePolicyAsync(
+                new DetachRolePolicyRequest() { RoleName = roleName, PolicyArn = policyArn },
+                cancellationToken).EnsureSuccessAsync();
 
         public async Task<Role[]> ListRolesAsync(string pathPrefx = null, CancellationToken cancellationToken = default(CancellationToken))
         {
