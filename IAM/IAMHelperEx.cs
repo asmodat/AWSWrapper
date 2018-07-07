@@ -11,27 +11,27 @@ namespace AWSWrapper.IAM
 {
     public static class IAMHelperEx
     {
-        public static Task<CreatePolicyResponse> CreateAdminAccessPolicyS3Async(this IAMHelper iam, string path, string name, string description = null, CancellationToken cancellationToken = default(CancellationToken))
+        public static Task<CreatePolicyResponse> CreateAdminAccessPolicyS3Async(this IAMHelper iam, IEnumerable<string> paths, string name, string description = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string json =
-$@"{{
-    ""Version"": ""2012-10-17"",
-    ""Statement"": [
+            var sub_policies = "";
+
+            paths.ForEach((path, i) => {
+                sub_policies +=
+$@"
         {{
-            ""Sid"": ""VisualEditor0"",
-            ""Effect"": ""Allow"",
-            ""Action"": [
-                ""s3:ListAllMyBuckets"",
-                ""s3:HeadBucket""
-            ],
-            ""Resource"": ""*""
-        }},
-        {{
-            ""Sid"": ""VisualEditor1"",
+            ""Sid"": ""VisualEditor{i}"",
             ""Effect"": ""Allow"",
             ""Action"": ""s3:*"",
             ""Resource"": ""arn:aws:s3:::{path}""
-        }}
+        }},";
+            });
+
+            sub_policies = sub_policies.TrimEnd(',');
+
+            string json =
+$@"{{
+    ""Version"": ""2012-10-17"",
+    ""Statement"": [{sub_policies}
     ]
 }}";
             return iam.CreatePolicyAsync(name: name, description: description, json: json, cancellationToken: cancellationToken);
