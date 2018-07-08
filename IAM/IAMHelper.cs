@@ -8,6 +8,7 @@ using Amazon.IdentityManagement.Model;
 using AWSWrapper.Extensions;
 using AsmodatStandard.Extensions;
 using AsmodatStandard.Extensions.Collections;
+using Amazon.SecurityToken.Model;
 
 namespace AWSWrapper.IAM
 {
@@ -16,11 +17,26 @@ namespace AWSWrapper.IAM
         internal readonly int _maxDegreeOfParalelism;
         internal readonly AmazonIdentityManagementServiceClient _IAMClient;
 
-        public IAMHelper(int maxDegreeOfParalelism = 8)
+        public IAMHelper(Credentials credentials, int maxDegreeOfParalelism = 8)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
-            _IAMClient = new AmazonIdentityManagementServiceClient();
+
+            if (credentials != null)
+                _IAMClient = new AmazonIdentityManagementServiceClient(credentials);
+            else
+                _IAMClient = new AmazonIdentityManagementServiceClient();
         }
+
+       /* public Task<AttachRolePolicyResponse> AttachRolePolicyAsync(
+            string roleName,
+            string policyArn,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            _IAMClient.ListAccessKeysAsync(
+                new AttachRolePolicyRequest() { RoleName = roleName, PolicyArn = policyArn },
+                cancellationToken).EnsureSuccessAsync();
+        }*/
+
 
         public Task<DeleteRoleResponse> DeleteRoleAsync(
             string roleName,
@@ -154,7 +170,7 @@ namespace AWSWrapper.IAM
             var results = new List<Role>();
             while ((response = await _IAMClient.ListRolesAsync(new ListRolesRequest()
             {
-                MaxItems = 100,
+                MaxItems = 1000,
                 Marker = nextToken,
                 PathPrefix = pathPrefx
             }, cancellationToken).EnsureSuccessAsync()) != null)
@@ -165,6 +181,29 @@ namespace AWSWrapper.IAM
                 results.AddRange(response.Roles);
 
                 if (response.Marker.IsNullOrEmpty())
+                    break;
+
+                nextToken = response.Marker;
+            }
+
+            return results.ToArray();
+        }
+
+        public async Task<AccessKeyMetadata[]> ListAccessKeysAsync(string userName = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            string nextToken = null;
+            ListAccessKeysResponse response;
+            var results = new List<AccessKeyMetadata>();
+            while ((response = await _IAMClient.ListAccessKeysAsync(new ListAccessKeysRequest() {
+                Marker = nextToken,
+                MaxItems = 1000,
+                UserName = userName
+            }, cancellationToken).EnsureSuccessAsync()) != null)
+            {
+                if (!response.AccessKeyMetadata.IsNullOrEmpty())
+                    results.AddRange(response.AccessKeyMetadata);
+
+                if (!response.IsTruncated)
                     break;
 
                 nextToken = response.Marker;

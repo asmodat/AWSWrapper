@@ -1,11 +1,6 @@
 ﻿using System.Threading.Tasks;
 using System.Threading;
-using Amazon.IdentityManagement.Model;
-using AsmodatStandard.Extensions.Collections;
-using System.Linq;
 using System.Collections.Generic;
-using System;
-using AsmodatStandard.Threading;
 using System.IO;
 using AsmodatStandard.Extensions.IO;
 using Amazon.S3.Model;
@@ -16,7 +11,7 @@ namespace AWSWrapper.S3
 {
     public static class S3HelperEx
     {
-        public static Task<CompleteMultipartUploadResponse> UploadTextAsync(this S3Helper s3,
+        public static Task<string> UploadTextAsync(this S3Helper s3,
             string bucketName,
             string key,
             string text,
@@ -28,7 +23,7 @@ namespace AWSWrapper.S3
                 contentType: "plain/text",
                 cancellationToken: cancellationToken);
 
-        public static async Task<CompleteMultipartUploadResponse> UploadStreamAsync(this S3Helper s3,
+        public static async Task<string> UploadStreamAsync(this S3Helper s3,
         string bucketName,
         string key,
         Stream inputStream,
@@ -36,9 +31,15 @@ namespace AWSWrapper.S3
         CancellationToken cancellationToken = default(CancellationToken))
         {
             var bufferSize = 128 * 1024;
-            var tInit = s3.InitiateMultipartUploadAsync(bucketName, key, contentType, cancellationToken);
             var blob = inputStream.ToMemoryBlob(maxLength: s3.DefaultPartSize, bufferSize: bufferSize);
-            var uploadId = (await tInit).UploadId;
+
+            if (blob.Length < s3.MaxSinglePartSize)
+            {
+                var spResult = await s3.PutObjectAsync(bucketName: bucketName, key: key, inputStream: blob, cancellationToken: cancellationToken);
+                return spResult.ETag.Trim('"');
+            }
+            
+            var init = await s3.InitiateMultipartUploadAsync(bucketName, key, contentType, cancellationToken);
             var partNumber = 0;
             var tags = new List<PartETag>();
             while (blob.Length > 0)
@@ -48,7 +49,7 @@ namespace AWSWrapper.S3
                 var tUpload = s3.UploadPartAsync(
                     bucketName: bucketName,
                     key: key,
-                    uploadId: uploadId,
+                    uploadId: init.UploadId,
                     partNumber: partNumber,
                     partSize: (int)blob.Length,
                     inputStream: blob.CopyToMemoryStream(bufferSize: bufferSize), //copy so new part can be read at the same time
@@ -61,14 +62,14 @@ namespace AWSWrapper.S3
                 tags.Add(new PartETag(partNumber, (await tUpload).ETag));
             }
 
-            var result = await s3.CompleteMultipartUploadAsync(
+            var mpResult = await s3.CompleteMultipartUploadAsync(
                 bucketName: bucketName,
                 key: key,
-                uploadId: uploadId,
+                uploadId: init.UploadId,
                 partETags: tags,
                 cancellationToken: cancellationToken);
 
-            return result;
+            return mpResult.ETag.Trim('"');
         }
     }
 }

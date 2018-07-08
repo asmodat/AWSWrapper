@@ -25,6 +25,7 @@ namespace AWSWrapper.Extensions
 
             return true;
         }
+
         public static string GetResourceName(string arn)
         {
             if (!IsARN(arn))

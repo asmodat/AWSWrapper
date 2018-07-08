@@ -10,19 +10,25 @@ using AsmodatStandard.Extensions;
 using AsmodatStandard.Extensions.Collections;
 using System.IO;
 using Amazon.Runtime;
+using Amazon.SecurityToken.Model;
 
 namespace AWSWrapper.S3
 {
     public partial class S3Helper
     {
+        public readonly int MaxSinglePartSize = 5 * 1024 * 1025;
         public readonly int DefaultPartSize = 5*1024*1025;
         internal readonly int _maxDegreeOfParalelism;
         internal readonly AmazonS3Client _S3Client;
 
-        public S3Helper(int maxDegreeOfParalelism = 8)
+        public S3Helper(Credentials credentials = null, int maxDegreeOfParalelism = 8)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
-            _S3Client = new AmazonS3Client();
+
+            if (credentials != null)
+                _S3Client = new AmazonS3Client(credentials);
+            else
+                _S3Client = new AmazonS3Client();
         }
 
         public Task<DeleteObjectsResponse> DeleteObjectsAsync(
@@ -39,8 +45,35 @@ namespace AWSWrapper.S3
             string contentType,
             CancellationToken cancellationToken = default(CancellationToken))
             => _S3Client.InitiateMultipartUploadAsync(
-                new InitiateMultipartUploadRequest() { BucketName = bucketName, Key = key, ContentType = contentType }, 
+                new InitiateMultipartUploadRequest() {
+                    BucketName = bucketName,
+                    Key = key,
+                    ContentType = contentType
+                }, 
                 cancellationToken).EnsureSuccessAsync();
+
+        public Task<PutObjectResponse> PutObjectAsync(
+            string bucketName,
+            string key,
+            Stream inputStream,
+            Action<object, StreamTransferProgressArgs> progress = null,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if (inputStream.Length > MaxSinglePartSize)
+                throw new ArgumentException($"Part size in singlepart upload can't exceed {MaxSinglePartSize} B, but was {inputStream.Length} B, bucket: {bucketName}, key: {key}.");
+
+            var request = new PutObjectRequest()
+            {
+                BucketName = bucketName,
+                Key = key,
+                InputStream = inputStream,
+            };
+
+            if (progress != null)
+                request.StreamTransferProgress += new EventHandler<StreamTransferProgressArgs>(progress);
+
+            return _S3Client.PutObjectAsync(request, cancellationToken).EnsureSuccessAsync();
+        }
 
         public Task<UploadPartResponse> UploadPartAsync(
             string bucketName,
@@ -119,7 +152,7 @@ namespace AWSWrapper.S3
             return results.ToArray();
         }
 
-        public async Task<S3Bucket[]> ListBucketsAsync(string bucketName, string prefix, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<S3Bucket[]> ListBucketsAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             var response = await _S3Client.ListBucketsAsync(new ListBucketsRequest(), cancellationToken).EnsureSuccessAsync();
             return response.Buckets.ToArray();

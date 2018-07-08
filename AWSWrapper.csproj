@@ -5,23 +5,31 @@
     <Product>AWSWrapper</Product>
     <Description>Amazon Web Services .NET Standard Extentions</Description>
     <PackageId>Asmodat.AWSWrapper</PackageId>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <PackageReleaseNotes>Release nr. 2</PackageReleaseNotes>
-    <Version>1.0.0.1</Version>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <PackageReleaseNotes>2018-07-08</PackageReleaseNotes>
+    <Version>1.0.0.10</Version>
     <PackageProjectUrl>https://github.com/asmodat/AWSWrapper</PackageProjectUrl>
-    <PackageTags>AWS, Asmodat, Amazon</PackageTags>
+    <PackageTags>AWS, Asmodat, Amazon, Amazon SDK Extensions, Amazon SDK, SDK, Extensions, Amazon Web Services</PackageTags>
     <PackageRequireLicenseAcceptance>False</PackageRequireLicenseAcceptance>
     <Company>Asmodat</Company>
     <Authors>Asmodat</Authors>
+    <PackageIconUrl>https://avatars3.githubusercontent.com/u/10515811</PackageIconUrl>
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove=".gitattributes" />
+    <None Remove=".gitignore" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Asmodat.Standard" Version="1.0.0.2" />
     <PackageReference Include="AWSSDK.AutoScaling" Version="3.3.4.3" />
     <PackageReference Include="AWSSDK.AutoScalingPlans" Version="3.3.0.4" />
     <PackageReference Include="AWSSDK.CloudFormation" Version="3.3.10" />
     <PackageReference Include="AWSSDK.CloudWatch" Version="3.3.6" />
     <PackageReference Include="AWSSDK.CloudWatchLogs" Version="3.3.4.6" />
     <PackageReference Include="AWSSDK.Core" Version="3.3.24.3" />
+    <PackageReference Include="AWSSDK.KeyManagementService" Version="3.3.5.9" />
     <PackageReference Include="AWSSDK.S3" Version="3.3.18.6" />
     <PackageReference Include="AWSSDK.EC2" Version="3.3.47.3" />
     <PackageReference Include="AWSSDK.ECR" Version="3.3.3.6" />
@@ -31,14 +39,13 @@
     <PackageReference Include="AWSSDK.IdentityManagement" Version="3.3.6.1" />
     <PackageReference Include="AWSSDK.ResourceGroups" Version="3.3.0.3" />
     <PackageReference Include="AWSSDK.Route53" Version="3.3.15.3" />
+    <PackageReference Include="AWSSDK.SecurityToken" Version="3.3.4.7" />
     <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.3.0.27" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Asmodat Standard\Asmodat Standard\Asmodat Standard.csproj">
-      <Private>true</Private>
-    </ProjectReference>
+    <Folder Include="KMS\" />
   </ItemGroup>
 
 </Project>

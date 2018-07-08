@@ -11,6 +11,12 @@ namespace AWSWrapper.IAM
 {
     public static class IAMHelperEx
     {
+        public static async Task<AccessKeyMetadata> GetAccessKeyByIdAsync(this IAMHelper iam, string name, StringComparison stringComparison = StringComparison.InvariantCultureIgnoreCase, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var list = await iam.ListAccessKeysAsync(cancellationToken: cancellationToken);
+            return list.Single(x => x.AccessKeyId.Equals(name, stringComparison));
+        }
+
         public static Task<CreatePolicyResponse> CreateAdminAccessPolicyS3Async(this IAMHelper iam, IEnumerable<string> paths, string name, string description = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             var sub_policies = "";
