@@ -17,7 +17,7 @@ namespace AWSWrapper.S3
     public partial class S3Helper
     {
         public readonly int MaxSinglePartSize = 5 * 1024 * 1025;
-        public readonly int DefaultPartSize = 5*1024*1025;
+        public readonly int DefaultPartSize = 5 * 1024 * 1025;
         internal readonly int _maxDegreeOfParalelism;
         internal readonly AmazonS3Client _S3Client;
 
