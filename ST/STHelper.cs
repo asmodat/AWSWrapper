@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon.SecurityToken;
 using Amazon.SecurityToken.Model;
 using AWSWrapper.Extensions;
-using AsmodatStandard.Extensions;
-using AsmodatStandard.Extensions.Collections;
 
 namespace AWSWrapper.ST
 {

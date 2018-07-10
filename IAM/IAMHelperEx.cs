@@ -73,7 +73,14 @@ $@"{{
                 throw new ArgumentException($"{nameof(name)} is null or empty");
 
             var policy = await iam.GetPolicyByNameAsync(name: name, stringComparison: stringComparison, cancellationToken: cancellationToken);
-            return await iam.DeletePolicyAsync(arn: policy.Arn, cancellationToken: cancellationToken);
+
+            var versions = (await iam.ListPolicyVersionsAsync(policy.Arn, cancellationToken)).Where(v => !v.IsDefaultVersion);
+
+            await versions.ForEachAsync(
+                v => iam.DeletePolicyVersionAsync(arn: policy.Arn, versionId: v.VersionId,  cancellationToken: cancellationToken), 
+                maxDegreeOfParallelism: iam._maxDegreeOfParalelism);
+
+            return await iam.DeletePolicyAsync(policy.Arn, cancellationToken);
         }
 
         public static async Task<(DeleteRoleResponse role, DetachRolePolicyResponse[] policies)> DeleteRoleAsync(this IAMHelper iam, string roleName, bool detachPolicies, StringComparison stringComparison = StringComparison.InvariantCultureIgnoreCase, CancellationToken cancellationToken = default(CancellationToken))

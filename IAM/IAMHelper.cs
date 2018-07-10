@@ -75,7 +75,18 @@ namespace AWSWrapper.IAM
 
         public Task<DeletePolicyResponse> DeletePolicyAsync(string arn, CancellationToken cancellationToken = default(CancellationToken))
             => _IAMClient.DeletePolicyAsync(
-                new DeletePolicyRequest() { PolicyArn = arn  },
+                new DeletePolicyRequest() {
+                    PolicyArn = arn
+                },
+                cancellationToken).EnsureSuccessAsync();
+
+        public Task<DeletePolicyVersionResponse> DeletePolicyVersionAsync(string arn, string versionId, CancellationToken cancellationToken = default(CancellationToken))
+            => _IAMClient.DeletePolicyVersionAsync(
+                new DeletePolicyVersionRequest()
+                {
+                    PolicyArn = arn,
+                    VersionId = versionId
+                },
                 cancellationToken).EnsureSuccessAsync();
 
         public async Task<ManagedPolicy[]> ListPoliciesAsync(string pathPrefx = null, bool onlyAttached = false, CancellationToken cancellationToken = default(CancellationToken))
@@ -202,6 +213,30 @@ namespace AWSWrapper.IAM
             {
                 if (!response.AccessKeyMetadata.IsNullOrEmpty())
                     results.AddRange(response.AccessKeyMetadata);
+
+                if (!response.IsTruncated)
+                    break;
+
+                nextToken = response.Marker;
+            }
+
+            return results.ToArray();
+        }
+
+        public async Task<PolicyVersion[]> ListPolicyVersionsAsync(string arn, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            string nextToken = null;
+            ListPolicyVersionsResponse response;
+            var results = new List<PolicyVersion>();
+            while ((response = await _IAMClient.ListPolicyVersionsAsync(new ListPolicyVersionsRequest()
+            {
+                Marker = nextToken,
+                MaxItems = 1000,
+                PolicyArn = arn
+            }, cancellationToken).EnsureSuccessAsync()) != null)
+            {
+                if (!response.Versions.IsNullOrEmpty())
+                    results.AddRange(response.Versions);
 
                 if (!response.IsTruncated)
                     break;
