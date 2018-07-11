@@ -20,15 +20,36 @@ namespace AWSWrapper.S3
         public readonly int DefaultPartSize = 5 * 1024 * 1025;
         internal readonly int _maxDegreeOfParalelism;
         internal readonly AmazonS3Client _S3Client;
+        internal readonly Credentials _credentials;
 
         public S3Helper(Credentials credentials = null, int maxDegreeOfParalelism = 8)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
+            _credentials = credentials;
 
             if (credentials != null)
                 _S3Client = new AmazonS3Client(credentials);
             else
                 _S3Client = new AmazonS3Client();
+        }
+
+        public Task<GetObjectResponse> GetObjectAsync(
+            string bucketName,
+            string key = null,
+            string versionId = null,
+            string keyId = null,
+            string eTag = null,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var request = new GetObjectRequest()
+            {
+                BucketName = bucketName,
+                Key = key,
+                VersionId = versionId,
+                EtagToMatch = eTag,
+            };
+
+            return _S3Client.GetObjectAsync(request, cancellationToken).EnsureSuccessAsync();
         }
 
         public Task<DeleteObjectsResponse> DeleteObjectsAsync(
@@ -43,12 +64,14 @@ namespace AWSWrapper.S3
             string bucketName,
             string key,
             string contentType,
+            string keyId = null,
             CancellationToken cancellationToken = default(CancellationToken))
             => _S3Client.InitiateMultipartUploadAsync(
                 new InitiateMultipartUploadRequest() {
                     BucketName = bucketName,
                     Key = key,
-                    ContentType = contentType
+                    ContentType = contentType,
+                    ServerSideEncryptionKeyManagementServiceKeyId = keyId
                 }, 
                 cancellationToken).EnsureSuccessAsync();
 
@@ -56,6 +79,7 @@ namespace AWSWrapper.S3
             string bucketName,
             string key,
             Stream inputStream,
+            string keyId = null,
             Action<object, StreamTransferProgressArgs> progress = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -67,6 +91,7 @@ namespace AWSWrapper.S3
                 BucketName = bucketName,
                 Key = key,
                 InputStream = inputStream,
+                ServerSideEncryptionKeyManagementServiceKeyId = keyId,
             };
 
             if (progress != null)
@@ -95,7 +120,7 @@ namespace AWSWrapper.S3
                 UploadId = uploadId,
                 PartNumber = partNumber,
                 PartSize = partSize,
-                InputStream = inputStream
+                InputStream = inputStream,
             };
 
             if (progress != null)
@@ -110,20 +135,15 @@ namespace AWSWrapper.S3
             string uploadId,
             IEnumerable<PartETag> partETags,
             CancellationToken cancellationToken = default(CancellationToken))
-        {
-            var request = new CompleteMultipartUploadRequest()
-            {
-                BucketName = bucketName,
-                Key = key,
-                UploadId = uploadId
-            };
+                => _S3Client.CompleteMultipartUploadAsync(
+                new CompleteMultipartUploadRequest()
+                {
+                    BucketName = bucketName,
+                    Key = key,
+                    UploadId = uploadId,
+                    PartETags = partETags.ToList(),
+                }, cancellationToken).EnsureSuccessAsync();
 
-            request.AddPartETags(partETags.ToArray());
-
-            return _S3Client.CompleteMultipartUploadAsync(
-                request,
-                cancellationToken).EnsureSuccessAsync();
-        }
 
         public async Task<S3Object[]> ListObjectsAsync(string bucketName, string prefix, CancellationToken cancellationToken = default(CancellationToken))
         {

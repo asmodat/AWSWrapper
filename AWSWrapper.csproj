@@ -7,7 +7,7 @@
     <PackageId>Asmodat.AWSWrapper</PackageId>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageReleaseNotes>2018-07-09</PackageReleaseNotes>
-    <Version>1.0.0.11</Version>
+    <Version>1.0.0.12</Version>
     <PackageProjectUrl>https://github.com/asmodat/AWSWrapper</PackageProjectUrl>
     <PackageTags>AWS, Asmodat, Amazon, Amazon SDK Extensions, Amazon SDK, SDK, Extensions, Amazon Web Services</PackageTags>
     <PackageRequireLicenseAcceptance>False</PackageRequireLicenseAcceptance>
@@ -22,7 +22,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Asmodat.Standard" Version="1.0.0.3" />
     <PackageReference Include="AWSSDK.AutoScaling" Version="3.3.4.3" />
     <PackageReference Include="AWSSDK.AutoScalingPlans" Version="3.3.0.4" />
     <PackageReference Include="AWSSDK.CloudFormation" Version="3.3.10" />
@@ -42,6 +41,12 @@
     <PackageReference Include="AWSSDK.SecurityToken" Version="3.3.4.7" />
     <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.3.0.27" />
     <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Asmodat Standard\Asmodat Standard\Asmodat Standard.csproj">
+      <Private>true</Private>
+    </ProjectReference>
   </ItemGroup>
 
 </Project>
