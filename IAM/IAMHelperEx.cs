@@ -25,7 +25,7 @@ namespace AWSWrapper.IAM
                 throw new ArgumentNullException($"{nameof(permissions)} can't be null");
 
             var actions = permissions.Any(p => p == S3Helper.Permissions.All) ?
-                "s3:*" : permissions.SelectMany(
+                "\"s3:*\"" : permissions.SelectMany(
                 p => p.ToStringFlagArray().Select(s => $"s3:{s}"))
                 .Distinct().JsonSerialize();
 
