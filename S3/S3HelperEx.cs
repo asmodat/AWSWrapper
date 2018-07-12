@@ -16,6 +16,26 @@ namespace AWSWrapper.S3
 {
     public static class S3HelperEx
     {
+        public static async Task<bool> ObjectExistsAsync(this S3Helper s3,
+            string bucketName,
+            string key,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            try
+            {
+                var metadata = await s3.GetObjectMetadata(bucketName: bucketName, key: key, cancellationToken: cancellationToken);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                if (ex is Amazon.S3.AmazonS3Exception &&
+                   (ex as Amazon.S3.AmazonS3Exception).StatusCode == System.Net.HttpStatusCode.NotFound)
+                    return false;
+
+                throw;
+            }
+        }
+
         public static async Task<DeleteObjectsResponse> DeleteVersionedObjectAsync(this S3Helper s3,
             string bucketName,
             string key,

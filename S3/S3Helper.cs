@@ -62,6 +62,16 @@ namespace AWSWrapper.S3
                 _S3Client = new AmazonS3Client();
         }
 
+        public Task<GetObjectMetadataResponse> GetObjectMetadata(
+            string bucketName,
+            string key = null,
+            CancellationToken cancellationToken = default(CancellationToken))
+            => _S3Client.GetObjectMetadataAsync(new GetObjectMetadataRequest()
+            {
+                BucketName = bucketName,
+                Key = key,
+            }, cancellationToken).EnsureSuccessAsync();
+
         public Task<DeleteObjectResponse> DeleteObjectAsync(
             string bucketName,
             string key = null,

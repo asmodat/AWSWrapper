@@ -24,9 +24,10 @@ namespace AWSWrapper.IAM
             if (permissions == null)
                 throw new ArgumentNullException($"{nameof(permissions)} can't be null");
 
-            var actions = permissions.SelectMany(
+            var actions = permissions.Any(p => p == S3Helper.Permissions.All) ?
+                "s3:*" : permissions.SelectMany(
                 p => p.ToStringFlagArray().Select(s => $"s3:{s}"))
-                .Distinct();
+                .Distinct().JsonSerialize();
 
             var sub_policies = "";
 
@@ -36,7 +37,7 @@ $@"
         {{
             ""Sid"": ""VisualEditor{i}"",
             ""Effect"": ""Allow"",
-            ""Action"": {(actions.IsNullOrEmpty() ? "[ ]" : actions.JsonSerialize())},
+            ""Action"": {(actions.IsNullOrEmpty() ? "[ ]" : actions)},
             ""Resource"": ""arn:aws:s3:::{path}""
         }},";
             });
