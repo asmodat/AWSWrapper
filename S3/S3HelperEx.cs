@@ -7,11 +7,39 @@ using Amazon.S3.Model;
 using System.Text;
 using AsmodatStandard.Extensions;
 using AWSWrapper.KMS;
+using AsmodatStandard.Extensions.Collections;
+using AsmodatStandard.Threading;
+using System.Linq;
+using System;
 
 namespace AWSWrapper.S3
 {
     public static class S3HelperEx
     {
+        public static async Task<DeleteObjectsResponse> DeleteVersionedObjectAsync(this S3Helper s3,
+            string bucketName,
+            string key,
+            bool throwOnFailure = true,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var versions = await s3.ListVersionsAsync(
+                bucketName: bucketName,
+                prefix: key,
+                cancellationToken: cancellationToken);
+
+            var keyVersions = versions.Select(ver => new KeyVersion() { Key = key, VersionId = ver.VersionId });
+
+            var response = await s3.DeleteObjectsAsync(
+                        bucketName: bucketName,
+                        objects: keyVersions,
+                        cancellationToken: cancellationToken);
+
+            if (throwOnFailure && response.DeleteErrors.Count  > 0)
+                throw new Exception($"Failed to delete all object versions of key '{key}' in bucket '{bucketName}', {response.DeletedObjects.Count} Deleted {response.DeleteErrors.Count} Errors, Delete Errors: {response.DeleteErrors.JsonSerialize(Newtonsoft.Json.Formatting.Indented)}");
+
+            return response;
+        }
+
         public static async Task<string> DownloadTextAsync(this S3Helper s3,
             string bucketName,
             string key,

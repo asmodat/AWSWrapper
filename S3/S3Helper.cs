@@ -16,6 +16,35 @@ namespace AWSWrapper.S3
 {
     public partial class S3Helper
     {
+        public enum Permissions
+        {
+            None = 0,
+            AbortMultipartUpload = 1,
+            DeleteObject = 1 << 1,
+            DeleteObjectTagging = 1 << 2,
+            DeleteObjectVersion = 1 << 3,
+            DeleteObjectVersionTagging = 1 << 4,
+            GetObject = 1 << 5,
+            GetObjectAcl = 1 << 6,
+            GetObjectTagging = 1 << 7,
+            GetObjectTorrent = 1 << 8,
+            GetObjectVersion = 1 << 9,
+            GetObjectVersionAcl = 1 << 10,
+            GetObjectVersionTagging = 1 << 11,
+            GetObjectVersionTorrent = 1 << 12,
+            ListMultipartUploadParts = 1 << 13,
+            PutObject = 1 << 14,
+            PutObjectAcl = 1 << 15,
+            PutObjectTagging = 1 << 16,
+            PutObjectVersionAcl = 1 << 17,
+            PutObjectVersionTagging = 1 << 18,
+            RestoreObject = 1 << 19,
+            Read = GetObject | GetObjectAcl | GetObjectTagging | GetObjectTorrent | GetObjectVersion | GetObjectVersionTagging | GetObjectVersionTorrent | ListMultipartUploadParts,
+            Write = AbortMultipartUpload | PutObject | PutObjectAcl | PutObjectTagging | PutObjectVersionAcl | PutObjectVersionTagging | RestoreObject,
+            Delete = DeleteObject | DeleteObjectTagging | DeleteObjectVersion | DeleteObjectVersionTagging,
+            All = Read | Write | Delete
+        }
+
         public readonly int MaxSinglePartSize = 5 * 1024 * 1025;
         public readonly int DefaultPartSize = 5 * 1024 * 1025;
         internal readonly int _maxDegreeOfParalelism;
@@ -31,6 +60,24 @@ namespace AWSWrapper.S3
                 _S3Client = new AmazonS3Client(credentials);
             else
                 _S3Client = new AmazonS3Client();
+        }
+
+        public Task<DeleteObjectResponse> DeleteObjectAsync(
+            string bucketName,
+            string key = null,
+            string versionId = null,
+            string keyId = null,
+            string eTag = null,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var request = new DeleteObjectRequest()
+            {
+                BucketName = bucketName,
+                Key = key,
+                VersionId = versionId,
+            };
+
+            return _S3Client.DeleteObjectAsync(request, cancellationToken).EnsureSuccessAsync();
         }
 
         public Task<GetObjectResponse> GetObjectAsync(
@@ -57,7 +104,7 @@ namespace AWSWrapper.S3
             IEnumerable<KeyVersion> objects,
             CancellationToken cancellationToken = default(CancellationToken))
             => _S3Client.DeleteObjectsAsync(
-                new DeleteObjectsRequest() { BucketName = bucketName, RequestPayer = RequestPayer.Requester, Quiet = false, Objects = objects.ToList() },
+                new DeleteObjectsRequest() { BucketName = bucketName, Quiet = false, Objects = objects.ToList() },
                 cancellationToken).EnsureSuccessAsync();
 
         public Task<InitiateMultipartUploadResponse> InitiateMultipartUploadAsync(
@@ -172,6 +219,40 @@ namespace AWSWrapper.S3
             return results.ToArray();
         }
 
+        public async Task<S3ObjectVersion[]> ListVersionsAsync(string bucketName, string prefix, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            string nextIdToken = null;
+            string nextKeyToken = null;
+            ListVersionsResponse response;
+            var results = new List<S3ObjectVersion>();
+            while ((response = await _S3Client.ListVersionsAsync(new ListVersionsRequest()
+            {
+                VersionIdMarker = nextIdToken,
+                KeyMarker = nextKeyToken,
+                BucketName = bucketName,
+                Prefix = prefix,
+                MaxKeys = 100000,
+            }, cancellationToken).EnsureSuccessAsync()) != null)
+            {
+                if ((response.Versions?.Count ?? 0) != 0)
+                    results.AddRange(response.Versions);
+
+                nextIdToken = response.NextVersionIdMarker;
+
+                if (!nextIdToken.IsNullOrEmpty())
+                    nextIdToken = response.NextVersionIdMarker;
+                else if (!nextKeyToken.IsNullOrEmpty())
+                {
+                    nextKeyToken = response.NextKeyMarker;
+                    nextIdToken = null;
+                }
+                else
+                    break;
+            }
+
+            return results.ToArray();
+        }
+        
         public async Task<S3Bucket[]> ListBucketsAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             var response = await _S3Client.ListBucketsAsync(new ListBucketsRequest(), cancellationToken).EnsureSuccessAsync();

@@ -6,6 +6,8 @@ using System.Linq;
 using System.Collections.Generic;
 using System;
 using AsmodatStandard.Threading;
+using AsmodatStandard.Extensions;
+using AWSWrapper.S3;
 
 namespace AWSWrapper.IAM
 {
@@ -17,8 +19,15 @@ namespace AWSWrapper.IAM
             return list.Single(x => x.AccessKeyId.Equals(name, stringComparison));
         }
 
-        public static Task<CreatePolicyResponse> CreateAdminAccessPolicyS3Async(this IAMHelper iam, IEnumerable<string> paths, string name, string description = null, CancellationToken cancellationToken = default(CancellationToken))
+        public static Task<CreatePolicyResponse> CreatePolicyS3Async(this IAMHelper iam, IEnumerable<string> paths, string name, IEnumerable<S3Helper.Permissions> permissions, string description = null, CancellationToken cancellationToken = default(CancellationToken))
         {
+            if (permissions == null)
+                throw new ArgumentNullException($"{nameof(permissions)} can't be null");
+
+            var actions = permissions.SelectMany(
+                p => p.ToStringFlagArray().Select(s => $"s3:{s}"))
+                .Distinct();
+
             var sub_policies = "";
 
             paths.ForEach((path, i) => {
@@ -27,7 +36,7 @@ $@"
         {{
             ""Sid"": ""VisualEditor{i}"",
             ""Effect"": ""Allow"",
-            ""Action"": ""s3:*"",
+            ""Action"": {(actions.IsNullOrEmpty() ? "[ ]" : actions.JsonSerialize())},
             ""Resource"": ""arn:aws:s3:::{path}""
         }},";
             });
