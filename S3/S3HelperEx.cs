@@ -36,7 +36,7 @@ namespace AWSWrapper.S3
             }
         }
 
-        public static async Task<DeleteObjectsResponse> DeleteVersionedObjectAsync(this S3Helper s3,
+        public static async Task<bool> DeleteVersionedObjectAsync(this S3Helper s3,
             string bucketName,
             string key,
             bool throwOnFailure = true,
@@ -47,17 +47,44 @@ namespace AWSWrapper.S3
                 prefix: key,
                 cancellationToken: cancellationToken);
 
-            var keyVersions = versions.Select(ver => new KeyVersion() { Key = key, VersionId = ver.VersionId });
+            var keyVersions = versions
+                .Where(v => !v.IsLatest)
+                .Select(ver => new KeyVersion() { Key = key, VersionId = ver.VersionId })
+                .ToArray();
 
-            var response = await s3.DeleteObjectsAsync(
-                        bucketName: bucketName,
-                        objects: keyVersions,
-                        cancellationToken: cancellationToken);
+            if (keyVersions.Length > 0)
+            {
+                var response = await s3.DeleteObjectsAsync(
+                            bucketName: bucketName,
+                            objects: keyVersions,
+                            cancellationToken: cancellationToken);
 
-            if (throwOnFailure && response.DeleteErrors.Count  > 0)
-                throw new Exception($"Failed to delete all object versions of key '{key}' in bucket '{bucketName}', {response.DeletedObjects.Count} Deleted {response.DeleteErrors.Count} Errors, Delete Errors: {response.DeleteErrors.JsonSerialize(Newtonsoft.Json.Formatting.Indented)}");
+                if (response.DeleteErrors.Count > 0)
+                    if (throwOnFailure)
+                        throw new Exception($"Failed to delete all object versions of key '{key}' in bucket '{bucketName}', {response.DeletedObjects.Count} Deleted {response.DeleteErrors.Count} Errors, Delete Errors: {response.DeleteErrors.JsonSerialize(Newtonsoft.Json.Formatting.Indented)}");
+                    else
+                        return false;
 
-            return response;
+                return await s3.DeleteVersionedObjectAsync(bucketName, key, throwOnFailure, cancellationToken);
+            }
+
+            try
+            {
+                var latest = versions.Single(x => x.IsLatest);
+                await s3.DeleteObjectAsync(bucketName: bucketName, key: key, versionId: latest.VersionId, cancellationToken: cancellationToken);
+
+                return true;
+            }
+            catch
+            {
+                if (!await s3.ObjectExistsAsync(bucketName, key, cancellationToken))
+                    return true;
+
+                if (throwOnFailure)
+                    throw;
+                else
+                    return false;
+            }
         }
 
         public static async Task<string> DownloadTextAsync(this S3Helper s3,

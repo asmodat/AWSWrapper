@@ -35,14 +35,16 @@ namespace AWSWrapper.IAM
                 sub_policies +=
 $@"
         {{
-            ""Sid"": ""VisualEditor{i}"",
+            ""Sid"": ""AWSHelper{i}"",
             ""Effect"": ""Allow"",
             ""Action"": {(actions.IsNullOrEmpty() ? "[ ]" : actions)},
             ""Resource"": ""arn:aws:s3:::{path}""
         }},";
             });
 
-            sub_policies = sub_policies.TrimEnd(',');
+            //this must be present otherwise its not possible to delete objects from the buckt due to some AWS bug
+            sub_policies += $"{{ \"Sid\": \"AWSHelper{paths.Count()}\", \"Effect\": \"Allow\", \"Action\": [ \"s3:List*\" ], \"Resource\": \"arn:aws:s3:::*\" }}";
+            //sub_policies = sub_policies.TrimEnd(',');
 
             string json =
 $@"{{

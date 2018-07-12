@@ -114,7 +114,11 @@ namespace AWSWrapper.S3
             IEnumerable<KeyVersion> objects,
             CancellationToken cancellationToken = default(CancellationToken))
             => _S3Client.DeleteObjectsAsync(
-                new DeleteObjectsRequest() { BucketName = bucketName, Quiet = false, Objects = objects.ToList() },
+                new DeleteObjectsRequest() {
+                    BucketName = bucketName,
+                    Quiet = false,
+                    Objects = objects.ToList(),
+                },
                 cancellationToken).EnsureSuccessAsync();
 
         public Task<InitiateMultipartUploadResponse> InitiateMultipartUploadAsync(
