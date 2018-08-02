@@ -18,7 +18,7 @@ namespace AWSWrapper.ECS
             string token = null;
             List<string> list = new List<string>();
             Amazon.ECS.Model.ListTaskDefinitionsResponse response;
-            while ((response = await _ECSClient.ListTaskDefinitionsAsync(
+            while ((response = await _client.ListTaskDefinitionsAsync(
                 new Amazon.ECS.Model.ListTaskDefinitionsRequest()
                 {
                     FamilyPrefix = familyPrefix,
@@ -45,7 +45,7 @@ namespace AWSWrapper.ECS
             string token = null;
             List<string> list = new List<string>();
             Amazon.ECS.Model.ListClustersResponse response;
-            while ((response = await _ECSClient.ListClustersAsync(
+            while ((response = await _client.ListClustersAsync(
                 new Amazon.ECS.Model.ListClustersRequest()
                 {
                     NextToken = token,
@@ -71,7 +71,7 @@ namespace AWSWrapper.ECS
             string token = null;
             List<string> list = new List<string>();
             Amazon.ECS.Model.ListServicesResponse response;
-            while ((response = await _ECSClient.ListServicesAsync(
+            while ((response = await _client.ListServicesAsync(
                 new Amazon.ECS.Model.ListServicesRequest()
                 {
                    NextToken = token,
@@ -99,7 +99,7 @@ namespace AWSWrapper.ECS
             string token = null;
             List<string> list = new List<string>();
             Amazon.ECS.Model.ListTasksResponse response;
-            while ((response = await _ECSClient.ListTasksAsync(
+            while ((response = await _client.ListTasksAsync(
                 new Amazon.ECS.Model.ListTasksRequest()
                 {
                     MaxResults = 100,
@@ -126,7 +126,7 @@ namespace AWSWrapper.ECS
             if (services != null && services.Count() > 10)
                 throw new ArgumentException($"DescribeServicesAsync failed, no more then 10 services lookup allowed, but was: '{services?.Count()}'.");
 
-            var response = await _ECSClient.DescribeServicesAsync(
+            var response = await _client.DescribeServicesAsync(
                 new Amazon.ECS.Model.DescribeServicesRequest()
                 {
                     Cluster = cluster,

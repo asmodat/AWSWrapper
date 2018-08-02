@@ -19,6 +19,9 @@ namespace AWSWrapper.Route53
             _client = new AmazonRoute53Client();
         }
 
+        public Task<GetHostedZoneResponse> GetHostedZoneAsync(string id, CancellationToken cancellationToken = default(CancellationToken))
+            => _client.GetHostedZoneAsync(new GetHostedZoneRequest() { Id = id }, cancellationToken).EnsureSuccessAsync();
+
         public async Task<HostedZone[]> ListHostedZonesAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             string nextToken = null;

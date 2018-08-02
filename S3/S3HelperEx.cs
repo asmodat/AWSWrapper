@@ -136,9 +136,9 @@ namespace AWSWrapper.S3
             }
 
             var bufferSize = 128 * 1024;
-            var blob = inputStream.ToMemoryBlob(maxLength: s3.DefaultPartSize, bufferSize: bufferSize);
+            var blob = inputStream.ToMemoryBlob(maxLength: (s3.MaxSinglePartSize + 1), bufferSize: bufferSize);
 
-            if (blob.Length < s3.MaxSinglePartSize)
+            if (blob.Length <= s3.MaxSinglePartSize)
             {
                 var spResult = await s3.PutObjectAsync(bucketName: bucketName, key: key, inputStream: blob, keyId: keyId, cancellationToken: cancellationToken);
                 return spResult.ETag.Trim('"');
@@ -157,7 +157,7 @@ namespace AWSWrapper.S3
                     uploadId: init.UploadId,
                     partNumber: partNumber,
                     partSize: (int)blob.Length,
-                    inputStream: blob.CopyToMemoryStream(bufferSize: bufferSize), //copy so new part can be read at the same time
+                    inputStream: blob.CopyToMemoryStream(bufferSize: (int)blob.Length), //copy so new part can be read at the same time
                     progress: null,
                     cancellationToken: cancellationToken);
 

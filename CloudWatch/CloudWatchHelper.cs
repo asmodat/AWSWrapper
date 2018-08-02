@@ -9,6 +9,7 @@ using AsmodatStandard.Extensions;
 using AsmodatStandard.Threading;
 using AsmodatStandard.Extensions.Collections;
 using AWSWrapper.Extensions;
+using System.Threading;
 
 namespace AWSWrapper.CloudWatch
 {
@@ -25,11 +26,11 @@ namespace AWSWrapper.CloudWatch
             _clientLogs = new AmazonCloudWatchLogsClient();
         }
 
-        public async Task DeleteLogGroupsAsync(IEnumerable<string> names)
+        public async Task DeleteLogGroupsAsync(IEnumerable<string> names, CancellationToken cancellationToken = default(CancellationToken))
         {
             var responses = await names.ForEachAsync(name =>
                 _clientLogs.DeleteLogGroupAsync(
-                    new Amazon.CloudWatchLogs.Model.DeleteLogGroupRequest() { LogGroupName = name }),
+                    new Amazon.CloudWatchLogs.Model.DeleteLogGroupRequest() { LogGroupName = name }, cancellationToken),
                     _maxDegreeOfParalelism
             );
 

@@ -1,21 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Amazon;
-using Amazon.ElasticLoadBalancing;
-using Amazon.ElasticLoadBalancingV2;
-using AsmodatStandard.Extensions;
-using AsmodatStandard.Threading;
-using AsmodatStandard.Extensions.Collections;
 using AWSWrapper.Extensions;
-
+using System.Threading;
 
 namespace AWSWrapper.ELB
 {
     public partial class ELBHelper
     {
-        public async Task<IEnumerable<Amazon.ElasticLoadBalancingV2.Model.LoadBalancer>> DescribeLoadBalancersAsync(IEnumerable<string> names, IEnumerable<string> loadBalancerArns = null)
+        public async Task<IEnumerable<Amazon.ElasticLoadBalancingV2.Model.LoadBalancer>> DescribeLoadBalancersAsync(
+            IEnumerable<string> names, 
+            IEnumerable<string> loadBalancerArns = null,
+            CancellationToken cancellationToken = default(CancellationToken))
         {
             string token = null;
             var list = new List<Amazon.ElasticLoadBalancingV2.Model.LoadBalancer>();
@@ -26,7 +22,7 @@ namespace AWSWrapper.ELB
                     LoadBalancerArns = loadBalancerArns?.ToList(),
                     Names = names?.ToList(),
                     Marker = token
-                }))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
+                }, cancellationToken))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
             {
                 if (response?.LoadBalancers == null || response.LoadBalancers.Count <= 0)
                     break;
@@ -42,7 +38,9 @@ namespace AWSWrapper.ELB
             return list;
         }
 
-        public async Task<IEnumerable<Amazon.ElasticLoadBalancingV2.Model.Listener>> DescribeListenersAsync(string loadBalancerArn)
+        public async Task<IEnumerable<Amazon.ElasticLoadBalancingV2.Model.Listener>> DescribeListenersAsync(
+            string loadBalancerArn,
+            CancellationToken cancellationToken = default(CancellationToken))
         {
             string token = null;
             var list = new List<Amazon.ElasticLoadBalancingV2.Model.Listener>();
@@ -52,7 +50,7 @@ namespace AWSWrapper.ELB
                 {
                     LoadBalancerArn = loadBalancerArn,
                     Marker = token
-                }))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
+                }, cancellationToken))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
             {
                 if (response?.Listeners == null || response.Listeners.Count <= 0)
                     break;
@@ -71,7 +69,8 @@ namespace AWSWrapper.ELB
         public async Task<IEnumerable<Amazon.ElasticLoadBalancingV2.Model.TargetGroup>> DescribeTargetGroupsAsync(
             string loadBalancerArn, 
             IEnumerable<string> names = null,
-             IEnumerable<string> targetGroupArns = null)
+             IEnumerable<string> targetGroupArns = null, 
+             CancellationToken cancellationToken = default(CancellationToken))
         {
             string token = null;
             var list = new List<Amazon.ElasticLoadBalancingV2.Model.TargetGroup>();
@@ -83,7 +82,7 @@ namespace AWSWrapper.ELB
                     Marker = token,
                     LoadBalancerArn = loadBalancerArn,
                     TargetGroupArns = targetGroupArns?.ToList()
-                }))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
+                }, cancellationToken))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
             {
                 if (response?.TargetGroups == null || response.TargetGroups.Count <= 0)
                     break;
