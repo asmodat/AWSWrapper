@@ -10,6 +10,8 @@ using AsmodatStandard.Threading;
 using AsmodatStandard.Extensions.Collections;
 using AWSWrapper.Extensions;
 using System.Threading;
+using Amazon.CloudWatchLogs.Model;
+using System.Net;
 
 namespace AWSWrapper.CloudWatch
 {
@@ -26,15 +28,34 @@ namespace AWSWrapper.CloudWatch
             _clientLogs = new AmazonCloudWatchLogsClient();
         }
 
-        public async Task DeleteLogGroupsAsync(IEnumerable<string> names, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            var responses = await names.ForEachAsync(name =>
-                _clientLogs.DeleteLogGroupAsync(
-                    new Amazon.CloudWatchLogs.Model.DeleteLogGroupRequest() { LogGroupName = name }, cancellationToken),
-                    _maxDegreeOfParalelism
-            );
+        public Task CreateLogGroupAsync(string name, CancellationToken cancellationToken = default(CancellationToken))
+            => _clientLogs.CreateLogGroupAsync(new CreateLogGroupRequest()
+            {
+                LogGroupName = name,
+                Tags = new Dictionary<string, string>() { { "Timestamp", DateTime.UtcNow.ToRfc3339String() } }
+            }, cancellationToken).EnsureSuccessAsync();
 
-            responses.EnsureSuccess();
+        public async Task<DeleteLogGroupResponse> DeleteLogGroupAsync(string name, bool throwIfNotFound = true, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            try
+            {
+                var result = (throwIfNotFound) ?
+                    _clientLogs.DeleteLogGroupAsync(new DeleteLogGroupRequest() { LogGroupName = name }, cancellationToken) :
+                    _clientLogs.DeleteLogGroupAsync(new DeleteLogGroupRequest() { LogGroupName = name });
+
+                return await result.EnsureSuccessAsync();
+            }
+            catch (ResourceNotFoundException ex)
+            {
+                if (throwIfNotFound)
+                    throw ex;
+
+                return new DeleteLogGroupResponse() { HttpStatusCode = HttpStatusCode.NotFound };
+            }
         }
+
+        public Task<DeleteLogGroupResponse[]> DeleteLogGroupsAsync(IEnumerable<string> names, bool throwIfNotFound = true, CancellationToken cancellationToken = default(CancellationToken))
+            => names.ForEachAsync(name => DeleteLogGroupAsync(name, throwIfNotFound: throwIfNotFound, cancellationToken: cancellationToken), _maxDegreeOfParalelism, cancellationToken)
+            .EnsureSuccess();
     }
 }

@@ -2,45 +2,36 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Amazon;
-using Amazon.ECS;
-using AsmodatStandard.Extensions;
-using AsmodatStandard.Threading;
-using AsmodatStandard.Extensions.Collections;
 using Amazon.ElasticLoadBalancingV2;
 using System.Threading;
 using Amazon.ElasticLoadBalancingV2.Model;
+using AWSWrapper.Extensions;
 
 namespace AWSWrapper.ELB
 {
     public static class ELBHelperEx
     {
-        public static async Task<(
-            TargetGroup targetGroup, 
-            LoadBalancer loadBalancer,
-            Listener listener
-            )> CreateHttpApplicationLoadBalancer(
+        public static async Task<LoadBalancer> CreateApplicationLoadBalancerAsync(
             this ELBHelper elbh,
             string name,
             IEnumerable<string> subnets,
             IEnumerable<string> securityGroups,
             bool isInternal,
+            CancellationToken cancellationToken = default(CancellationToken))
+            => (await elbh.CreateLoadBalancerAsync(
+               name, subnets, securityGroups, LoadBalancerTypeEnum.Application,
+               isInternal ? LoadBalancerSchemeEnum.Internal : LoadBalancerSchemeEnum.InternetFacing,
+               cancellationToken).EnsureSuccessAsync()).LoadBalancers.Single();
+
+        public static async Task<TargetGroup> CreateHttpTargetGroupAsync(
+            this ELBHelper elbh,
+            string name,
             int port,
             string vpcId,
             string healthCheckPath,
-            CancellationToken cancellationToken = default(CancellationToken) )
-        {
-
-            var albName = $"{name}-alb-{(isInternal ? "prv" : "pub")}";
-            var tgName = $"{name}-tg-{(isInternal ? "prv" : "pub")}";
-
-            await elbh.DestroyLoadBalancer(loadBalancerName: albName, throwIfNotFound: false, cancellationToken: cancellationToken);
-
-            var tAlb = elbh.CreateLoadBalancerAsync(albName, subnets, securityGroups, LoadBalancerTypeEnum.Application,
-               isInternal ? LoadBalancerSchemeEnum.Internal : LoadBalancerSchemeEnum.InternetFacing, cancellationToken);
-
-            var tTg = elbh.CreateTargetGroupAsync(
-                tgName,
+            CancellationToken cancellationToken = default(CancellationToken))
+            => (await elbh.CreateTargetGroupAsync(
+                name,
                 port,
                 ProtocolEnum.HTTP,
                 vpcId,
@@ -50,23 +41,21 @@ namespace AWSWrapper.ELB
                 healthyThresholdCount: 3,
                 unhealthyThresholdCount: 2,
                 healthCheckTimeoutSeconds: 5,
-                cancellationToken: cancellationToken);
+                cancellationToken: cancellationToken).EnsureSuccessAsync()).TargetGroups.Single();
 
-            var alb = (await tAlb).LoadBalancers.Single();
-            var tg = (await tTg).TargetGroups.Single();
-
-            var tL = elbh.CreateListenerAsync(
+        public static async Task<Listener> CreateHttpListenerAsync(
+            this ELBHelper elbh,
+            string loadBalancerArn,
+            string targetGroupArn,
+            int port,
+            CancellationToken cancellationToken = default(CancellationToken))
+            => (await elbh.CreateListenerAsync(
                 port,
                 ProtocolEnum.HTTP,
-                alb.LoadBalancerArn,
-                tg.TargetGroupArn,
+                loadBalancerArn,
+                targetGroupArn,
                 ActionTypeEnum.Forward,
-                cancellationToken);
-
-            var l = (await tL).Listeners.Single();
-
-            return (tg, alb, l);
-        }
+                cancellationToken).EnsureSuccessAsync()).Listeners.Single();
 
         public static async Task<IEnumerable<string>> ListListenersAsync(this ELBHelper elbh, string loadBalancerArn, CancellationToken cancellationToken = default(CancellationToken))
            => (await elbh.DescribeListenersAsync(loadBalancerArn)).Select(x => x.ListenerArn);

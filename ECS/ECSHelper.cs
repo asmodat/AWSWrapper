@@ -1,7 +1,9 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon.ECS;
+using Amazon.ECS.Model;
 using AsmodatStandard.Threading;
 using AWSWrapper.Extensions;
 
@@ -11,6 +13,9 @@ namespace AWSWrapper.ECS
     {
         private readonly int _maxDegreeOfParalelism;
         private readonly AmazonECSClient _client;
+        public AmazonECSClient Client {
+            get => _client;
+        }
 
         public ECSHelper(int maxDegreeOfParalelism = 8)
         {
@@ -18,26 +23,70 @@ namespace AWSWrapper.ECS
             _client = new AmazonECSClient();
         }
 
-        public Task<Amazon.ECS.Model.CreateClusterResponse> CreateClusterAsync(string name, CancellationToken cancellationToken = default(CancellationToken))
-            => _client.CreateClusterAsync(new Amazon.ECS.Model.CreateClusterRequest() { ClusterName = name }, cancellationToken).EnsureSuccessAsync();
+        public Task<CreateServiceResponse> CreateServiceAsync(
+            string name,
+            TaskDefinition taskDefinition,
+            int desiredCount,
+            LaunchType launchType,
+            string cluster,
+            NetworkConfiguration networkConfiguration,
+            LoadBalancer loadBalancer,
+            CancellationToken cancellationToken = default(CancellationToken))
+                => _client.CreateServiceAsync( new CreateServiceRequest() {
+                    ServiceName = name,
+                    TaskDefinition = $"{taskDefinition.Family}:{taskDefinition.Revision}",
+                    DesiredCount = desiredCount,
+                    LaunchType = launchType,
+                    Cluster = cluster,
+                    NetworkConfiguration = networkConfiguration,
+                    LoadBalancers = new List<LoadBalancer>() { loadBalancer }
+                }, cancellationToken);
 
-        public Task DeregisterTaskDefinitionsAsync(IEnumerable<string> arns, CancellationToken cancellationToken = default(CancellationToken)) => arns.ForEachAsync(
+        public Task<DeregisterTaskDefinitionResponse> DeregisterTaskDefinitionAsync(string taskDefinition, CancellationToken cancellationToken = default(CancellationToken))
+            => _client.DeregisterTaskDefinitionAsync(new DeregisterTaskDefinitionRequest() { TaskDefinition = taskDefinition }, cancellationToken).EnsureSuccessAsync();
+
+        public Task<RegisterTaskDefinitionResponse> RegisterTaskDefinitionAsync(
+            string executionRoleArn,
+            string taskRoleArn,
+            string family,
+            IEnumerable<string> requiresCompatibilities,
+            IEnumerable<ContainerDefinition> containerDefinitions,
+            int cpu,
+            int memory,
+            NetworkMode networkMode,
+            CancellationToken cancellationToken = default(CancellationToken))
+                => _client.RegisterTaskDefinitionAsync(new RegisterTaskDefinitionRequest()
+                {
+                    NetworkMode = networkMode,
+                    Cpu = $"{cpu}",
+                    Memory = $"{memory}",
+                    ExecutionRoleArn = executionRoleArn,
+                    TaskRoleArn = taskRoleArn,
+                    RequiresCompatibilities = requiresCompatibilities.ToList(),
+                    Family = family,
+                    ContainerDefinitions = containerDefinitions.ToList(),
+                }, cancellationToken);
+
+        public Task<CreateClusterResponse> CreateClusterAsync(string name, CancellationToken cancellationToken = default(CancellationToken))
+            => _client.CreateClusterAsync(new CreateClusterRequest() { ClusterName = name }, cancellationToken).EnsureSuccessAsync();
+
+        public Task<DeregisterTaskDefinitionResponse[]> DeregisterTaskDefinitionsAsync(IEnumerable<string> arns, CancellationToken cancellationToken = default(CancellationToken)) => arns.ForEachAsync(
             arn => _client.DeregisterTaskDefinitionAsync(
-                    new Amazon.ECS.Model.DeregisterTaskDefinitionRequest() { TaskDefinition = arn }, cancellationToken),
+                    new DeregisterTaskDefinitionRequest() { TaskDefinition = arn }, cancellationToken),
                     _maxDegreeOfParalelism).EnsureSuccess();
 
-        public Task UpdateServicesAsync(IEnumerable<string> arns, int desiredCount, string cluster, CancellationToken cancellationToken = default(CancellationToken)) => arns.ForEachAsync(
+        public Task<UpdateServiceResponse[]> UpdateServicesAsync(IEnumerable<string> arns, int desiredCount, string cluster, CancellationToken cancellationToken = default(CancellationToken)) => arns.ForEachAsync(
             arn => _client.UpdateServiceAsync(
-                    new Amazon.ECS.Model.UpdateServiceRequest() { Service = arn, DesiredCount = desiredCount, Cluster = cluster }, cancellationToken),
+                    new UpdateServiceRequest() { Service = arn, DesiredCount = desiredCount, Cluster = cluster }, cancellationToken),
                     _maxDegreeOfParalelism).EnsureSuccess();
 
-        public Task DeleteServicesAsync(IEnumerable<string> arns, string cluster, CancellationToken cancellationToken = default(CancellationToken)) => arns.ForEachAsync(
-            arn => _client.DeleteServiceAsync(new Amazon.ECS.Model.DeleteServiceRequest() { Service = arn, Cluster = cluster }, cancellationToken),
+        public Task<DeleteServiceResponse[]> DeleteServicesAsync(IEnumerable<string> arns, string cluster, CancellationToken cancellationToken = default(CancellationToken)) => arns.ForEachAsync(
+            arn => _client.DeleteServiceAsync(new DeleteServiceRequest() { Service = arn, Cluster = cluster }, cancellationToken),
                     _maxDegreeOfParalelism).EnsureSuccess();
 
-        public Task StopTasksAsync(IEnumerable<string> arns, string cluster, CancellationToken cancellationToken = default(CancellationToken)) 
+        public Task<StopTaskResponse[]> StopTasksAsync(IEnumerable<string> arns, string cluster, CancellationToken cancellationToken = default(CancellationToken)) 
             => arns.ForEachAsync(arn => _client.StopTaskAsync(
-                    new Amazon.ECS.Model.StopTaskRequest() { Task = arn, Cluster = cluster }, cancellationToken),
+                    new StopTaskRequest() { Task = arn, Cluster = cluster }, cancellationToken),
                     _maxDegreeOfParalelism).EnsureSuccess();
     }
 }

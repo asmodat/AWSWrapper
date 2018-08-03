@@ -132,7 +132,7 @@ namespace AWSWrapper.ECS
                     Cluster = cluster,
                     Services = services?.ToList()
                 });
-
+          
             response.EnsureSuccess();
             return response.Services;
         }

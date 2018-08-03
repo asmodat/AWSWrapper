@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using AsmodatStandard.Extensions;
 using AsmodatStandard.Extensions.Collections;
 using Amazon.Runtime;
+using System.Net;
 
 namespace AWSWrapper.Extensions
 {
@@ -42,6 +43,22 @@ namespace AWSWrapper.Extensions
             var response = await tResponse;
             if (response?.HttpStatusCode != System.Net.HttpStatusCode.OK)
                 throw new Exception($"'{callerMemberName}' Failed. Status code: '{response?.HttpStatusCode}', metadata: '{response?.ResponseMetadata.JsonSerialize()}'");
+            return response;
+        }
+
+        public static async Task<T> EnsureStatusCodeAsync<T>(this Task<T> tResponse, HttpStatusCode status, [System.Runtime.CompilerServices.CallerMemberName] string callerMemberName = "") where T : AmazonWebServiceResponse
+        {
+            var response = await tResponse;
+            if (response?.HttpStatusCode != status)
+                throw new Exception($"'{callerMemberName}' Failed. Expected Status code: '{status}' but was '{response?.HttpStatusCode}', metadata: '{response?.ResponseMetadata.JsonSerialize()}'");
+            return response;
+        }
+
+        public static async Task<T> EnsureAnyStatusCodeAsync<T>(this Task<T> tResponse, params HttpStatusCode[] status) where T : AmazonWebServiceResponse
+        {
+            var response = await tResponse;
+            if (!status.Any(x => x == response?.HttpStatusCode))
+                throw new Exception($"Failed. Expected Status Code to be one of '{status.JsonSerialize()}' but was '{response?.HttpStatusCode}', metadata: '{response?.ResponseMetadata.JsonSerialize()}'");
             return response;
         }
     }
