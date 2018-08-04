@@ -4,6 +4,8 @@ using Amazon.KeyManagementService.Model;
 using System.Linq;
 using System;
 using AWSWrapper.IAM;
+using System.Collections.Generic;
+using AsmodatStandard.Threading;
 
 namespace AWSWrapper.KMS
 {
@@ -26,11 +28,11 @@ namespace AWSWrapper.KMS
             return await kms.ListGrantsAsync(alias.TargetKeyId, cancellationToken);
         }
 
-        public static async Task<GrantListEntry> GetGrantByKeyNameAsync(this KMSHelper kms, string keyName, string grantName, StringComparison stringComparison = StringComparison.InvariantCultureIgnoreCase, CancellationToken cancellationToken = default(CancellationToken))
+        public static async Task<IEnumerable<GrantListEntry>> GetGrantsByKeyNameAsync(this KMSHelper kms, string keyName, string grantName, StringComparison stringComparison = StringComparison.InvariantCultureIgnoreCase, CancellationToken cancellationToken = default(CancellationToken))
         {
             var alias = await kms.GetKeyAliasByNameAsync(keyName, stringComparison, cancellationToken);
             var grants = await kms.ListGrantsAsync(alias.TargetKeyId, cancellationToken);
-            return grants.Single(x => x.GrantId.Equals(grantName, stringComparison) || x.Name.Equals(grantName, stringComparison));
+            return grants.Where(x => x.GrantId.Equals(grantName, stringComparison) || x.Name.Equals(grantName, stringComparison));
         }
 
         public static async Task<CreateGrantResponse> CreateRoleGrantByName(this KMSHelper kms, string keyName, string grantName, string roleName, KMSHelper.GrantType grant, StringComparison stringComparison = StringComparison.InvariantCultureIgnoreCase, CancellationToken cancellationToken = default(CancellationToken))
@@ -40,10 +42,10 @@ namespace AWSWrapper.KMS
             return await kms.CreateGrantAsync(grantName, alias.TargetKeyId, role.Arn, grant, cancellationToken);
         }
 
-        public static async Task<RetireGrantResponse> RemoveGrantByName(this KMSHelper kms, string keyName, string grantName, StringComparison stringComparison = StringComparison.InvariantCultureIgnoreCase, CancellationToken cancellationToken = default(CancellationToken))
+        public static async Task<RetireGrantResponse[]> RemoveGrantsByName(this KMSHelper kms, string keyName, string grantName, StringComparison stringComparison = StringComparison.InvariantCultureIgnoreCase, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var grant = await kms.GetGrantByKeyNameAsync(keyName, grantName, stringComparison, cancellationToken);
-            return await kms.RetireGrantAsync(grant.KeyId, grant.GrantId, cancellationToken);
+            var grants = await kms.GetGrantsByKeyNameAsync(keyName, grantName, stringComparison, cancellationToken);
+            return await grants.ForEachAsync(grant => kms.RetireGrantAsync(grant.KeyId, grant.GrantId));
         }
     }
 }
