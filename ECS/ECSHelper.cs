@@ -70,6 +70,9 @@ namespace AWSWrapper.ECS
         public Task<CreateClusterResponse> CreateClusterAsync(string name, CancellationToken cancellationToken = default(CancellationToken))
             => _client.CreateClusterAsync(new CreateClusterRequest() { ClusterName = name }, cancellationToken).EnsureSuccessAsync();
 
+        public Task<DeleteClusterResponse> DeleteClusterAsync(string name, CancellationToken cancellationToken = default(CancellationToken))
+            => _client.DeleteClusterAsync(new DeleteClusterRequest() { Cluster = name }, cancellationToken).EnsureSuccessAsync();
+
         public Task<DeregisterTaskDefinitionResponse[]> DeregisterTaskDefinitionsAsync(IEnumerable<string> arns, CancellationToken cancellationToken = default(CancellationToken)) => arns.ForEachAsync(
             arn => _client.DeregisterTaskDefinitionAsync(
                     new DeregisterTaskDefinitionRequest() { TaskDefinition = arn }, cancellationToken),
