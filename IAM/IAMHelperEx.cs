@@ -19,7 +19,7 @@ namespace AWSWrapper.IAM
             return list.Single(x => x.AccessKeyId.Equals(name, stringComparison));
         }
 
-        public static Task<CreatePolicyResponse> CreatePolicyS3Async(this IAMHelper iam, IEnumerable<string> paths, string name, IEnumerable<S3Helper.Permissions> permissions, string description = null, CancellationToken cancellationToken = default(CancellationToken))
+        public static async Task<ManagedPolicy> CreatePolicyS3Async(this IAMHelper iam, IEnumerable<string> paths, string name, IEnumerable<S3Helper.Permissions> permissions, string description = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (permissions == null)
                 throw new ArgumentNullException($"{nameof(permissions)} can't be null");
@@ -52,13 +52,18 @@ $@"{{
     ""Statement"": [{sub_policies}
     ]
 }}";
-            return iam.CreatePolicyAsync(name: name, description: description, json: json, cancellationToken: cancellationToken);
+            return (await iam.CreatePolicyAsync(name: name, description: description, json: json, cancellationToken: cancellationToken)).Policy;
         }
 
-        public static async Task<ManagedPolicy> GetPolicyByNameAsync(this IAMHelper iam, string name, StringComparison stringComparison = StringComparison.InvariantCultureIgnoreCase, CancellationToken cancellationToken = default(CancellationToken))
+        public static async Task<ManagedPolicy> GetPolicyByNameAsync(this IAMHelper iam, string name, StringComparison stringComparison = StringComparison.InvariantCultureIgnoreCase, bool throwIfNotFound = true, CancellationToken cancellationToken = default(CancellationToken))
         {
             var list = await iam.ListPoliciesAsync(cancellationToken: cancellationToken);
-            return list.Single(x => x.Arn.Equals(name, stringComparison) || x.PolicyName.Equals(name, stringComparison));
+            var policy = list.SingleOrDefault(x => x.Arn.Equals(name, stringComparison) || x.PolicyName.Equals(name, stringComparison));
+
+            if (policy == null && throwIfNotFound)
+                throw new Exception($"Policy with name '{name}' was not found.");
+
+            return policy;
         }
 
         public static async Task<ManagedPolicy[]> GetPoliciesByNamesAsync(this IAMHelper iam, IEnumerable<string> names, bool onlyAttached = false, StringComparison stringComparison = StringComparison.InvariantCultureIgnoreCase, CancellationToken cancellationToken = default(CancellationToken))
@@ -79,12 +84,15 @@ $@"{{
             return list.Single(x => x.RoleName.Equals(name, stringComparison));
         }
 
-        public static async Task<DeletePolicyResponse> DeletePolicyByNameAsync(this IAMHelper iam, string name, StringComparison stringComparison = StringComparison.InvariantCultureIgnoreCase, CancellationToken cancellationToken = default(CancellationToken))
+        public static async Task<DeletePolicyResponse> DeletePolicyByNameAsync(this IAMHelper iam, string name, StringComparison stringComparison = StringComparison.InvariantCultureIgnoreCase, bool throwIfNotFound = true, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (name.IsNullOrEmpty())
                 throw new ArgumentException($"{nameof(name)} is null or empty");
 
-            var policy = await iam.GetPolicyByNameAsync(name: name, stringComparison: stringComparison, cancellationToken: cancellationToken);
+            var policy = await iam.GetPolicyByNameAsync(name: name, stringComparison: stringComparison, throwIfNotFound: throwIfNotFound, cancellationToken: cancellationToken);
+
+            if (policy == null && !throwIfNotFound)
+                return null;
 
             var versions = (await iam.ListPolicyVersionsAsync(policy.Arn, cancellationToken)).Where(v => !v.IsDefaultVersion);
 
@@ -112,7 +120,7 @@ $@"{{
             return (await iam.DeleteRoleAsync(roleName, cancellationToken), detachRolePolicyResponses);
         }
 
-        public static async Task<(CreateRoleResponse roleResponse, AttachRolePolicyResponse[] policiesResponse)> CreateRoleWithPoliciesAsync(
+        public static async Task<Role> CreateRoleWithPoliciesAsync(
             this IAMHelper iam, string roleName,
             string[] policies,
             string roleDescription = null,
@@ -133,10 +141,10 @@ $@"{{
 
             var roleResponse = await tR;
 
-            var prs = await mp.ForEachAsync(p => iam.AttachRolePolicyAsync(roleResponse.Role.RoleName, p.Arn, cancellationToken)
-           , iam._maxDegreeOfParalelism, cancellationToken: cancellationToken);
+            await mp.ForEachAsync(p => iam.AttachRolePolicyAsync(roleResponse.Role.RoleName, p.Arn, cancellationToken), 
+                iam._maxDegreeOfParalelism, cancellationToken: cancellationToken);
 
-            return (roleResponse, prs);
+            return roleResponse.Role;
         }
     }
 }

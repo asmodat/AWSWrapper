@@ -18,6 +18,13 @@ namespace AWSWrapper.ECS
 {
     public static class ECSHelperEx
     {
+        public static async Task<ServiceInfo> GetServiceOrDefault(this ECSHelper ecs, string cluster, string serviceName)
+        {
+            var services = await ((cluster.IsNullOrEmpty()) ? ecs.ListServicesAsync() : ecs.ListServicesAsync(cluster));
+            return services.SingleOrDefault(
+                x => ((serviceName.StartsWith("arn:")) ? x.ARN == serviceName : x.ARN.EndsWith($":service/{serviceName}")));
+        }
+
         public static async Task<IEnumerable<ServiceInfo>> ListServicesAsync(this ECSHelper ecs)
         {
             var clusetrs = await ecs.ListClustersAsync();
@@ -109,13 +116,25 @@ namespace AWSWrapper.ECS
             return response.TaskDefinition;
         }
 
-        public static async Task<IEnumerable<ServiceInfo>> ListServicesAsync(this ECSHelper ecs, string cluster)
+        public static async Task<IEnumerable<ServiceInfo>> ListServicesAsync(this ECSHelper ecs, string cluster, bool throwIfNotFound = true)
         {
-            var tFargateServices = ecs.ListServicesAsync(cluster, LaunchType.FARGATE);
-            var tEC2Services = ecs.ListServicesAsync(cluster, LaunchType.EC2);
-            await System.Threading.Tasks.Task.WhenAll(tFargateServices, tEC2Services);
-            return tFargateServices.Result.Select(x => new ServiceInfo(cluster: cluster, arn: x, launchType: LaunchType.FARGATE))
-                .ConcatOrDefault(tEC2Services.Result.Select(x => new ServiceInfo(cluster: cluster, arn: x, launchType: LaunchType.EC2)));
+            IEnumerable<string> fargateServices = null;
+            IEnumerable<string> ec2Services = null;
+            try
+            {
+                fargateServices = await ecs.ListServicesAsync(cluster, LaunchType.FARGATE);
+                ec2Services = await ecs.ListServicesAsync(cluster, LaunchType.EC2);
+            }
+            catch(ClusterNotFoundException)
+            {
+                if (throwIfNotFound)
+                    throw;
+
+                return null;
+            }
+
+            return fargateServices.Select(x => new ServiceInfo(cluster: cluster, arn: x, launchType: LaunchType.FARGATE))
+                .ConcatOrDefault(ec2Services.Select(x => new ServiceInfo(cluster: cluster, arn: x, launchType: LaunchType.EC2)));
         }
 
         public static System.Threading.Tasks.Task UpdateServiceAsync(this ECSHelper ecs, int desiredCount, string cluster, params string[] arns)
@@ -126,9 +145,9 @@ namespace AWSWrapper.ECS
 
         public static async System.Threading.Tasks.Task DestroyService(this ECSHelper ecs, string cluster, string serviceName, bool throwIfNotFound = true, int drainingTimeout = 5*60*1000)
         {
-            var services = await ((cluster.IsNullOrEmpty()) ? ecs.ListServicesAsync() : ecs.ListServicesAsync(cluster));
+            var services = await ((cluster.IsNullOrEmpty()) ? ecs.ListServicesAsync() : ecs.ListServicesAsync(cluster, throwIfNotFound: throwIfNotFound));
 
-            services = services.Where(x => ((serviceName.StartsWith("arn:")) ? x.ARN == serviceName : x.ARN.EndsWith($":service/{serviceName}")));
+            services = services?.Where(x => ((serviceName.StartsWith("arn:")) ? x.ARN == serviceName : x.ARN.EndsWith($":service/{serviceName}")));
 
             if (!throwIfNotFound && (services?.Count() ?? 0) == 0)
                 return;

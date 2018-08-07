@@ -19,6 +19,41 @@ namespace AWSWrapper.Route53
             _client = new AmazonRoute53Client();
         }
 
+        public Task<UpdateHealthCheckResponse> UpdateHealthCheckAsync(
+            UpdateHealthCheckRequest request,
+            CancellationToken cancellationToken = default(CancellationToken))
+            => _client.UpdateHealthCheckAsync(request, cancellationToken).EnsureSuccessAsync();
+
+        public Task<DeleteHealthCheckResponse> DeleteHealthCheckAsync(
+            string healthCheckId,
+            CancellationToken cancellationToken = default(CancellationToken))
+            => _client.DeleteHealthCheckAsync(new DeleteHealthCheckRequest()
+            {
+                HealthCheckId = healthCheckId
+            }, cancellationToken).EnsureSuccessAsync();
+
+        public Task<CreateHealthCheckResponse> CreateHealthCheckAsync(
+            string name,
+            string uri,
+            int port,
+            string path,
+            string searchString = null,
+            int failureTreshold = 1,
+            CancellationToken cancellationToken = default(CancellationToken))
+            => _client.CreateHealthCheckAsync(new CreateHealthCheckRequest()
+            {
+                CallerReference = name,
+                HealthCheckConfig = new HealthCheckConfig()
+                {
+                    FullyQualifiedDomainName = uri,
+                    Port = port,
+                    ResourcePath = path,
+                    RequestInterval = 10,
+                    FailureThreshold = failureTreshold,
+                    SearchString = searchString,
+                }
+            }, cancellationToken).EnsureSuccessAsync();
+
         public Task<GetHostedZoneResponse> GetHostedZoneAsync(string id, CancellationToken cancellationToken = default(CancellationToken))
             => _client.GetHostedZoneAsync(new GetHostedZoneRequest() { Id = id }, cancellationToken).EnsureSuccessAsync();
 
@@ -73,6 +108,13 @@ namespace AWSWrapper.Route53
             {
                 Action = new ChangeAction(ChangeAction.UPSERT),
                 ResourceRecordSet = resourceRecordSet,
+            });
+
+        public Task UpsertResourceRecordSetsAsync(string zoneId, ResourceRecordSet oldRecordSet, ResourceRecordSet newRecordSet)
+            => ChangeResourceRecordSetsAsync(zoneId, oldRecordSet, new Change()
+            {
+                Action = new ChangeAction(ChangeAction.UPSERT),
+                ResourceRecordSet = newRecordSet,
             });
     }
 }

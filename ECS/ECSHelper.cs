@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -64,14 +65,29 @@ namespace AWSWrapper.ECS
                     TaskRoleArn = taskRoleArn,
                     RequiresCompatibilities = requiresCompatibilities.ToList(),
                     Family = family,
-                    ContainerDefinitions = containerDefinitions.ToList(),
+                    ContainerDefinitions = containerDefinitions.ToList()
                 }, cancellationToken);
 
         public Task<CreateClusterResponse> CreateClusterAsync(string name, CancellationToken cancellationToken = default(CancellationToken))
             => _client.CreateClusterAsync(new CreateClusterRequest() { ClusterName = name }, cancellationToken).EnsureSuccessAsync();
 
-        public Task<DeleteClusterResponse> DeleteClusterAsync(string name, CancellationToken cancellationToken = default(CancellationToken))
-            => _client.DeleteClusterAsync(new DeleteClusterRequest() { Cluster = name }, cancellationToken).EnsureSuccessAsync();
+        public async Task<DeleteClusterResponse> DeleteClusterAsync(string name, bool throwIfNotFound = true, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            DeleteClusterResponse result;
+            try
+            {
+                result = await _client.DeleteClusterAsync(new DeleteClusterRequest() { Cluster = name }, cancellationToken);
+            }
+            catch(ClusterNotFoundException)
+            {
+                if (throwIfNotFound)
+                    throw;
+
+                return null;
+            }
+
+            return result.EnsureSuccess();
+        }
 
         public Task<DeregisterTaskDefinitionResponse[]> DeregisterTaskDefinitionsAsync(IEnumerable<string> arns, CancellationToken cancellationToken = default(CancellationToken)) => arns.ForEachAsync(
             arn => _client.DeregisterTaskDefinitionAsync(

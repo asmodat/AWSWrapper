@@ -63,28 +63,14 @@ namespace AWSWrapper.ELB
         public static async Task<IEnumerable<string>> ListTargetGroupsAsync(
             this ELBHelper elbh,
             string loadBalancerArn,
-            IEnumerable<string> names = null, 
-            IEnumerable<string> targetGroupArns = null, 
+            IEnumerable<string> names = null,
+            IEnumerable<string> targetGroupArns = null,
             CancellationToken cancellationToken = default(CancellationToken))
             => (await elbh.DescribeTargetGroupsAsync(loadBalancerArn, names, targetGroupArns, cancellationToken)).Select(x => x.TargetGroupArn);
 
         public static async Task DestroyLoadBalancer(this ELBHelper elbh, string loadBalancerName, bool throwIfNotFound, CancellationToken cancellationToken = default(CancellationToken))
         {
-            IEnumerable<LoadBalancer> loadbalancers;
-
-            if (!throwIfNotFound)
-            {
-                try
-                {
-                    loadbalancers = await elbh.DescribeLoadBalancersAsync(new List<string>() { loadBalancerName });
-                }
-                catch(LoadBalancerNotFoundException ex)
-                {
-                    return;
-                }
-            }
-            else
-                loadbalancers = await elbh.DescribeLoadBalancersAsync(new List<string>() { loadBalancerName });
+            var loadbalancers = await elbh.GetLoadBalancersByName(loadBalancerName, throwIfNotFound, cancellationToken);
 
             if (loadbalancers.Count() != 1)
             {
@@ -106,6 +92,37 @@ namespace AWSWrapper.ELB
 
             //kill loadbalancer
             await elbh.DeleteLoadBalancersAsync(new List<string>() { arn }, cancellationToken);
+        }
+
+        public static async Task<IEnumerable<LoadBalancer>> GetLoadBalancersByName(this ELBHelper elbh, string loadBalancerName, bool throwIfNotFound, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if (!throwIfNotFound)
+            {
+                try
+                {
+                    return await elbh.DescribeLoadBalancersAsync(new List<string>() { loadBalancerName });
+                }
+                catch (LoadBalancerNotFoundException ex)
+                {
+                    return new LoadBalancer[0];
+                }
+            }
+            else
+                return await elbh.DescribeLoadBalancersAsync(new List<string>() { loadBalancerName });
+        }
+
+        public static async Task<IEnumerable<TargetGroup>> DescribeLoadBalancerTargetGroupsAsync(
+            this ELBHelper elbh,
+            string loadBalancerName,
+            bool thowIfNotFound,
+             CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var loadbalancer = (await elbh.GetLoadBalancersByName(loadBalancerName, thowIfNotFound, cancellationToken)).SingleOrDefault();
+
+            if (!thowIfNotFound)
+                return null;
+
+            return await elbh.DescribeTargetGroupsAsync(loadBalancerArn: loadbalancer.LoadBalancerArn, cancellationToken: cancellationToken);
         }
     }
 }

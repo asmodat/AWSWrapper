@@ -27,17 +27,6 @@ namespace AWSWrapper.IAM
                 _IAMClient = new AmazonIdentityManagementServiceClient();
         }
 
-       /* public Task<AttachRolePolicyResponse> AttachRolePolicyAsync(
-            string roleName,
-            string policyArn,
-            CancellationToken cancellationToken = default(CancellationToken))
-        {
-            _IAMClient.ListAccessKeysAsync(
-                new AttachRolePolicyRequest() { RoleName = roleName, PolicyArn = policyArn },
-                cancellationToken).EnsureSuccessAsync();
-        }*/
-
-
         public Task<DeleteRoleResponse> DeleteRoleAsync(
             string roleName,
             CancellationToken cancellationToken = default(CancellationToken))

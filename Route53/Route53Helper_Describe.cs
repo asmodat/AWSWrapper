@@ -1,21 +1,37 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
-using Amazon;
-using Amazon.ElasticLoadBalancing;
-using Amazon.ElasticLoadBalancingV2;
-using AsmodatStandard.Extensions;
-using AsmodatStandard.Threading;
-using AsmodatStandard.Extensions.Collections;
 using AWSWrapper.Extensions;
-
+using System.Threading;
 
 namespace AWSWrapper.Route53
 {
     public partial class Route53Helper
     {
-        public async Task<IEnumerable<Amazon.Route53.Model.ResourceRecordSet>> ListResourceRecordSetsAsync(string zoneId)
+        public async Task<IEnumerable<Amazon.Route53.Model.HealthCheck>> ListHealthChecksAsync(CancellationToken cancellationToken = default(CancellationToken))
+        {
+            string token = null;
+            var list = new List<Amazon.Route53.Model.HealthCheck>();
+            Amazon.Route53.Model.ListHealthChecksResponse response;
+            while ((response = await _client.ListHealthChecksAsync(
+                new Amazon.Route53.Model.ListHealthChecksRequest()
+                {
+                    Marker = token,
+                    MaxItems = "100"
+                }, cancellationToken))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
+            {
+                if ((response.HealthChecks?.Count ?? 0) != 0)
+                    list.AddRange(response.HealthChecks);
+
+                token = response.NextMarker;
+                if (token == null || response.IsTruncated == false)
+                    break;
+            }
+            
+            response.EnsureSuccess();
+            return list;
+        }
+
+        public async Task<IEnumerable<Amazon.Route53.Model.ResourceRecordSet>> ListResourceRecordSetsAsync(string zoneId, CancellationToken cancellationToken = default(CancellationToken))
         {
             string token = null;
             var list = new List<Amazon.Route53.Model.ResourceRecordSet>();
@@ -26,7 +42,7 @@ namespace AWSWrapper.Route53
                     StartRecordIdentifier = token,
                     HostedZoneId = zoneId
 
-                }))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
+                }, cancellationToken))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
             {
                 if (response?.ResourceRecordSets == null || response.ResourceRecordSets.Count <= 0)
                     break;

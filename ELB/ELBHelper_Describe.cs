@@ -54,7 +54,7 @@ namespace AWSWrapper.ELB
             {
                 if (response?.Listeners == null || response.Listeners.Count <= 0)
                     break;
-
+                
                 list.AddRange(response.Listeners);
 
                 token = response.NextMarker;
