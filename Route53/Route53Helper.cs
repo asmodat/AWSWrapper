@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon.Route53;
@@ -13,11 +14,47 @@ namespace AWSWrapper.Route53
         private readonly int _maxDegreeOfParalelism;
         private readonly AmazonRoute53Client _client;
 
+        public enum HealthCheckStatus
+        {
+            Unhealthy = 1,
+            Healthy = 2
+        }
+
         public Route53Helper(int maxDegreeOfParalelism = 8)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
             _client = new AmazonRoute53Client();
         }
+
+        public Task<ChangeTagsForResourceResponse> ChangeTagsForHealthCheckAsync(
+            string id,
+            IEnumerable<Tag> addTags,
+            IEnumerable<string> removeTags = null,
+            CancellationToken cancellationToken = default(CancellationToken))
+            => _client.ChangeTagsForResourceAsync(new ChangeTagsForResourceRequest() {
+                ResourceType = TagResourceType.Healthcheck,
+                ResourceId = id,
+                AddTags = addTags?.ToList(),
+                RemoveTagKeys = removeTags?.ToList()
+            }, cancellationToken).EnsureSuccessAsync();
+
+        public async Task<ResourceTagSet[]> ListTagsForHealthChecksAsync(IEnumerable<string> resourceIds, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var response = await _client.ListTagsForResourcesAsync(new ListTagsForResourcesRequest()
+            {
+                ResourceIds = resourceIds.ToList(),
+                ResourceType = TagResourceType.Healthcheck
+            }, cancellationToken: cancellationToken).EnsureSuccessAsync();
+
+            return response.ResourceTagSets.ToArray();
+        }
+
+        public Task<GetHealthCheckStatusResponse> GetHealthCheckStatusAsync(
+            string id,
+            CancellationToken cancellationToken = default(CancellationToken))
+            => _client.GetHealthCheckStatusAsync(new GetHealthCheckStatusRequest() {
+                HealthCheckId = id
+            }, cancellationToken).EnsureSuccessAsync();
 
         public Task<UpdateHealthCheckResponse> UpdateHealthCheckAsync(
             UpdateHealthCheckRequest request,
@@ -51,8 +88,34 @@ namespace AWSWrapper.Route53
                     RequestInterval = 10,
                     FailureThreshold = failureTreshold,
                     SearchString = searchString,
+                    Type = searchString.IsNullOrEmpty() ? HealthCheckType.HTTP : HealthCheckType.HTTP_STR_MATCH,
+                    EnableSNI = false,
+                    MeasureLatency = false,
                 }
-            }, cancellationToken).EnsureSuccessAsync();
+            }, cancellationToken).EnsureAnyStatusCodeAsync(System.Net.HttpStatusCode.OK, System.Net.HttpStatusCode.Created);
+
+        public Task<CreateHealthCheckResponse> CreateCloudWatchHealthCheckAsync(
+            string name,
+            string alarmName,
+            string alarmRegion,
+            bool inverted = false,
+            InsufficientDataHealthStatus insufficientDataHealthStatus = null,
+            CancellationToken cancellationToken = default(CancellationToken))
+            => _client.CreateHealthCheckAsync(new CreateHealthCheckRequest()
+            {
+                CallerReference = name,
+                HealthCheckConfig = new HealthCheckConfig()
+                {
+                    AlarmIdentifier = new AlarmIdentifier()
+                    {
+                        Name = alarmName,
+                        Region = alarmRegion
+                    },
+                    Inverted = inverted,
+                    InsufficientDataHealthStatus = insufficientDataHealthStatus ?? InsufficientDataHealthStatus.Unhealthy,
+                    Type = HealthCheckType.CLOUDWATCH_METRIC,
+                }
+            }, cancellationToken).EnsureAnyStatusCodeAsync(System.Net.HttpStatusCode.OK, System.Net.HttpStatusCode.Created);
 
         public Task<GetHostedZoneResponse> GetHostedZoneAsync(string id, CancellationToken cancellationToken = default(CancellationToken))
             => _client.GetHostedZoneAsync(new GetHostedZoneRequest() { Id = id }, cancellationToken).EnsureSuccessAsync();

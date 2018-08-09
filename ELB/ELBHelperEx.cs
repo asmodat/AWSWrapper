@@ -94,6 +94,17 @@ namespace AWSWrapper.ELB
             await elbh.DeleteLoadBalancersAsync(new List<string>() { arn }, cancellationToken);
         }
 
+        public static async Task<TargetGroup> GetTargetGroupByName(this ELBHelper elbh, string name, LoadBalancer lb, bool throwIfNotFound, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var tgs = await elbh.DescribeTargetGroupsAsync(lb.LoadBalancerArn);
+            var tg = tgs.SingleOrDefault(x => x.TargetGroupName == name);
+
+            if (throwIfNotFound && tg == null)
+                throw new Exception($"Could not find Target Group '{name}' for Load Balancer '{lb.LoadBalancerName}'");
+
+            return tg;
+        }
+
         public static async Task<IEnumerable<LoadBalancer>> GetLoadBalancersByName(this ELBHelper elbh, string loadBalancerName, bool throwIfNotFound, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (!throwIfNotFound)
