@@ -44,6 +44,9 @@ namespace AWSWrapper.Route53
             throw new Exception($"Health Check '{name}' coudn't reach '{status}' status within {timeout_s} [s], last state was: '{report.JsonSerialize(Newtonsoft.Json.Formatting.Indented)}'.");
         }
 
+        public static async Task<bool> HealthCheckExistsAsync(this Route53Helper r53h, string name, bool throwIfNotFound = true, CancellationToken cancellationToken = default(CancellationToken))
+           => (await r53h.GetHealthCheckAsync(name, throwIfNotFound: false, cancellationToken: cancellationToken)) != null;
+
         public static async Task<HealthCheck> GetHealthCheckAsync(this Route53Helper r53h, string name, bool throwIfNotFound = true, CancellationToken cancellationToken = default(CancellationToken))
         {
             var healthChecks = await r53h.ListHealthChecksAsync(cancellationToken);
@@ -215,16 +218,33 @@ namespace AWSWrapper.Route53
         string failover = null,
         bool throwIfNotFound = true)
         {
+            var sets = await r53h.GetRecordSetsAsync(zoneId, recordName, recordType, failover, throwIfNotFound: throwIfNotFound);
+
+            if (throwIfNotFound && (sets?.Length ?? 0) != 1)
+                throw new Exception($"{nameof(GetRecordSet)} Failed, more then one RecordSet with Name: '{recordName}' and Type: '{recordType}' was found. [{sets.Length}]");
+
+            return sets?.SingleOrDefault();
+        }
+
+        public static async Task<ResourceRecordSet[]> GetRecordSetsAsync(
+        this Route53Helper r53h,
+        string zoneId,
+        string recordName,
+        string recordType,
+        string failover = null,
+        bool throwIfNotFound = true)
+        {
+            var recordNameTrimmed = recordName.TrimEnd('.').TrimStartSingle("www.");
             var set = await r53h.ListResourceRecordSetsAsync(zoneId);
-            set = set?.Where(x => x.Name.TrimEnd('.') == recordName.TrimEnd('.') && x.Type == recordType && (failover == null || failover == x.Failover));
+            set = set?.Where(x => x.Name.TrimEnd('.').TrimStartSingle("www.") == recordNameTrimmed && x.Type == recordType && (failover == null || failover == x.Failover));
 
             if (!throwIfNotFound && set.IsNullOrEmpty())
                 return null;
 
-            if (set?.Count() != 1)
-                throw new Exception($"{nameof(GetRecordSet)} Failed, RecordSet with Name: '{recordName}' and Type: '{recordType}' was not found, or more then one was found. [{set?.Count()}]");
+            if (set?.Count() == 0)
+                throw new Exception($"{nameof(GetRecordSet)} Failed, RecordSet with Name: '{recordName}' and Type: '{recordType}' was not found.");
 
-            return set.First();
+            return set.ToArray();
         }
 
         public static async Task DestroyCNameRecord(this Route53Helper r53h, string zoneId, string name, string failover = null, bool throwIfNotFound = true)
@@ -236,12 +256,16 @@ namespace AWSWrapper.Route53
 
         public static async Task DestroyRecord(this Route53Helper r53h, string zoneId, string recordName, string recordType, string failover = null, bool throwIfNotFound = true)
         {
-            var record = await r53h.GetRecordSet(zoneId, recordName, recordType, failover: failover, throwIfNotFound: throwIfNotFound);
+            var records = await r53h.GetRecordSetsAsync(zoneId, recordName, recordType, failover: failover, throwIfNotFound: throwIfNotFound);
 
-            if (!throwIfNotFound && record == null)
+            if (!throwIfNotFound && records.IsNullOrEmpty())
                 return;
 
-            await r53h.DeleteResourceRecordSetsAsync(zoneId, record);
+            foreach(var record in records)
+            {
+                await r53h.DeleteResourceRecordSetsAsync(zoneId, record);
+                await Task.Delay(1000); //make sure request is porcessed
+            }
         }
 
         /// <summary>

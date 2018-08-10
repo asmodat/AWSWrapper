@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Amazon.Route53;
 using Amazon.Route53.Model;
 using AsmodatStandard.Extensions;
+using AsmodatStandard.Extensions.Threading;
 using AWSWrapper.Extensions;
 
 namespace AWSWrapper.Route53
@@ -13,6 +14,7 @@ namespace AWSWrapper.Route53
     {
         private readonly int _maxDegreeOfParalelism;
         private readonly AmazonRoute53Client _client;
+        private readonly static SemaphoreSlim _locker = new SemaphoreSlim(1, 1);
 
         public enum HealthCheckStatus
         {
@@ -147,7 +149,7 @@ namespace AWSWrapper.Route53
         public Task ChangeResourceRecordSetsAsync(
             string zoneId,
             ResourceRecordSet resourceRecordSet,
-            Change change) => _client.ChangeResourceRecordSetsAsync(
+            Change change) => _locker.Lock(() =>_client.ChangeResourceRecordSetsAsync(
                      new ChangeResourceRecordSetsRequest()
                      {
                          ChangeBatch = new ChangeBatch()
@@ -157,27 +159,27 @@ namespace AWSWrapper.Route53
                              }
                          },
                          HostedZoneId = zoneId
-                     }).EnsureSuccessAsync();
+                     }).EnsureSuccessAsync());
 
         public Task DeleteResourceRecordSetsAsync(string zoneId, ResourceRecordSet resourceRecordSet)
-            => ChangeResourceRecordSetsAsync(zoneId, resourceRecordSet, new Change()
+            => _locker.Lock(() => ChangeResourceRecordSetsAsync(zoneId, resourceRecordSet, new Change()
             {
                 Action = new ChangeAction(ChangeAction.DELETE),
                 ResourceRecordSet = resourceRecordSet
-            });
+            }));
 
         public Task UpsertResourceRecordSetsAsync(string zoneId, ResourceRecordSet resourceRecordSet)
-            => ChangeResourceRecordSetsAsync(zoneId, resourceRecordSet, new Change()
+            => _locker.Lock(() => ChangeResourceRecordSetsAsync(zoneId, resourceRecordSet, new Change()
             {
                 Action = new ChangeAction(ChangeAction.UPSERT),
                 ResourceRecordSet = resourceRecordSet,
-            });
+            }));
 
         public Task UpsertResourceRecordSetsAsync(string zoneId, ResourceRecordSet oldRecordSet, ResourceRecordSet newRecordSet)
-            => ChangeResourceRecordSetsAsync(zoneId, oldRecordSet, new Change()
+            => _locker.Lock(() => ChangeResourceRecordSetsAsync(zoneId, oldRecordSet, new Change()
             {
                 Action = new ChangeAction(ChangeAction.UPSERT),
                 ResourceRecordSet = newRecordSet,
-            });
+            }));
     }
 }
