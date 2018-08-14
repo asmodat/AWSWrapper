@@ -43,6 +43,26 @@ namespace AWSWrapper.ELB
                 healthCheckTimeoutSeconds: 5,
                 cancellationToken: cancellationToken).EnsureSuccessAsync()).TargetGroups.Single();
 
+        public static async Task<TargetGroup> CreateHttpsTargetGroupAsync(
+            this ELBHelper elbh,
+            string name,
+            int port,
+            string vpcId,
+            string healthCheckPath,
+            CancellationToken cancellationToken = default(CancellationToken))
+            => (await elbh.CreateTargetGroupAsync(
+                name,
+                port,
+                ProtocolEnum.HTTPS,
+                vpcId,
+                TargetTypeEnum.Ip,
+                healthCheckPath,
+                healthCheckIntervalSeconds: 30,
+                healthyThresholdCount: 3,
+                unhealthyThresholdCount: 2,
+                healthCheckTimeoutSeconds: 5,
+                cancellationToken: cancellationToken).EnsureSuccessAsync()).TargetGroups.Single();
+
         public static async Task<Listener> CreateHttpListenerAsync(
             this ELBHelper elbh,
             string loadBalancerArn,
@@ -55,7 +75,32 @@ namespace AWSWrapper.ELB
                 loadBalancerArn,
                 targetGroupArn,
                 ActionTypeEnum.Forward,
+                null,
+                null,
                 cancellationToken).EnsureSuccessAsync()).Listeners.Single();
+
+        public static async Task<Listener> CreateHttpsListenerAsync(
+            this ELBHelper elbh,
+            string loadBalancerArn,
+            string targetGroupArn,
+            int port,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+
+
+
+            var l = (await elbh.CreateListenerAsync(
+                port,
+                ProtocolEnum.HTTPS,
+                loadBalancerArn,
+                targetGroupArn,
+                ActionTypeEnum.Forward,
+                null,
+                "ELBSecurityPolicy-2016-08",
+                cancellationToken).EnsureSuccessAsync()).Listeners.Single();
+
+            return l;
+        }
 
         public static async Task<IEnumerable<string>> ListListenersAsync(this ELBHelper elbh, string loadBalancerArn, CancellationToken cancellationToken = default(CancellationToken))
            => (await elbh.DescribeListenersAsync(loadBalancerArn)).Select(x => x.ListenerArn);

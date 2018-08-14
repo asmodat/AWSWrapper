@@ -29,6 +29,8 @@ namespace AWSWrapper.ELB
             string loadBalancerArn,
             string targetGroupArn,
             ActionTypeEnum actionTypeEnum,
+            IEnumerable<Certificate> certificates = null,
+            string sslPolicy = null,
             CancellationToken cancellationToken = default(CancellationToken))
         => _clientV2.CreateListenerAsync(
                 new CreateListenerRequest()
@@ -42,7 +44,9 @@ namespace AWSWrapper.ELB
                             TargetGroupArn = targetGroupArn,
                             Type = actionTypeEnum
                         }
-                    }
+                    },
+                    Certificates = certificates?.ToList(),
+                    SslPolicy = sslPolicy
                 }
             , cancellationToken).EnsureSuccessAsync();
 

@@ -8,6 +8,35 @@ namespace AWSWrapper.ELB
 {
     public partial class ELBHelper
     {
+        public async Task<IEnumerable<Amazon.ElasticLoadBalancingV2.Model.Certificate>> DescribeListenerCertificatesAsync(
+            string listenerArn,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            string token = null;
+            var list = new List<Amazon.ElasticLoadBalancingV2.Model.Certificate>();
+            Amazon.ElasticLoadBalancingV2.Model.DescribeListenerCertificatesResponse response;
+            while ((response = await _clientV2.DescribeListenerCertificatesAsync(
+                new Amazon.ElasticLoadBalancingV2.Model.DescribeListenerCertificatesRequest()
+                {
+                    ListenerArn = listenerArn,
+                    PageSize = 100,
+                    Marker = token
+                }, cancellationToken))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
+            {
+                if ((response?.Certificates?.Count ?? 0) <= 0)
+                    break;
+                
+                list.AddRange(response.Certificates);
+
+                token = response.NextMarker;
+                if (token == null)
+                    break;
+            }
+
+            response.EnsureSuccess();
+            return list;
+        }
+
         public async Task<IEnumerable<Amazon.ElasticLoadBalancingV2.Model.LoadBalancer>> DescribeLoadBalancersAsync(
             IEnumerable<string> names, 
             IEnumerable<string> loadBalancerArns = null,
