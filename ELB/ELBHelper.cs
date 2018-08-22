@@ -61,6 +61,8 @@ namespace AWSWrapper.ELB
             int healthyThresholdCount,
             int unhealthyThresholdCount,
             int healthCheckTimeoutSeconds,
+            ProtocolEnum healthCheckProtocol,
+            int? healthCheckPort,
             CancellationToken cancellationToken = default(CancellationToken))
         => _clientV2.CreateTargetGroupAsync(
                 new CreateTargetGroupRequest()
@@ -75,6 +77,8 @@ namespace AWSWrapper.ELB
                     HealthyThresholdCount = healthyThresholdCount,
                     UnhealthyThresholdCount = unhealthyThresholdCount,
                     HealthCheckTimeoutSeconds = healthCheckTimeoutSeconds,
+                    HealthCheckProtocol = healthCheckProtocol,
+                    HealthCheckPort = (healthCheckPort == null ? null : $"{healthCheckPort.Value}")
                 }
             , cancellationToken).EnsureSuccessAsync();
 

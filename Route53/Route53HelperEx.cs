@@ -175,7 +175,7 @@ namespace AWSWrapper.Route53
             string setIdentifier = null)
         {
             var zone = await r53h.GetHostedZoneAsync(zoneId);
-            var cname = $"www.{name}.{zone.HostedZone.Name.TrimEnd('.')}";
+            var cname = $"{name}.{zone.HostedZone.Name.TrimEnd('.')}";
             await r53h.UpsertRecordAsync(zoneId,
                  cname,
                  value,
@@ -206,7 +206,7 @@ namespace AWSWrapper.Route53
             bool throwIfNotFound = true)
         {
             var zone = await r53h.GetHostedZoneAsync(zoneId);
-            var cname = $"www.{name}.{zone.HostedZone.Name.TrimEnd('.')}";
+            var cname = $"{name}.{zone.HostedZone.Name.TrimEnd('.')}";
             return await r53h.GetRecordSet(zoneId, cname, "CNAME", failover, throwIfNotFound);
         }
 
@@ -250,7 +250,7 @@ namespace AWSWrapper.Route53
         public static async Task DestroyCNameRecord(this Route53Helper r53h, string zoneId, string name, string failover = null, bool throwIfNotFound = true)
         {
             var zone = await r53h.GetHostedZoneAsync(zoneId);
-            var cname = $"www.{name}.{zone.HostedZone.Name.TrimEnd('.')}";
+            var cname = $"{name}.{zone.HostedZone.Name.TrimEnd('.')}";
             await r53h.DestroyRecord(zoneId, cname, "CNAME", failover: failover, throwIfNotFound: throwIfNotFound);
         }
 

@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 using Amazon.Route53;
 using Amazon.Route53.Model;
 using AsmodatStandard.Extensions;
+using AsmodatStandard.Extensions.Collections;
 using AsmodatStandard.Extensions.Threading;
+using AsmodatStandard.Threading;
 using AWSWrapper.Extensions;
 
 namespace AWSWrapper.Route53
@@ -51,13 +53,24 @@ namespace AWSWrapper.Route53
 
         public async Task<ResourceTagSet[]> ListTagsForHealthChecksAsync(IEnumerable<string> resourceIds, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var response = await _locker.Lock(() => _client.ListTagsForResourcesAsync(new ListTagsForResourcesRequest()
+            if (resourceIds.IsNullOrEmpty())
             {
-                ResourceIds = resourceIds.ToList(),
-                ResourceType = TagResourceType.Healthcheck
-            }, cancellationToken: cancellationToken).EnsureSuccessAsync());
+                if (resourceIds == null)
+                    return null;
+                else
+                    return new ResourceTagSet[0];
+            }
+            //Batches can be max 10
+            var result = await _locker.Lock(() => resourceIds.Batch(10).ForEachAsync(
+                    b => _client.ListTagsForResourcesAsync(new ListTagsForResourcesRequest()
+                    {
+                        ResourceIds = b.ToList(),
+                        ResourceType = TagResourceType.Healthcheck
+                    }, cancellationToken: cancellationToken).EnsureSuccessAsync()
+                , maxDegreeOfParallelism: _maxDegreeOfParalelism, cancellationToken: cancellationToken)
+            );
 
-            return response.ResourceTagSets.ToArray();
+            return result.SelectMany(x => x.ResourceTagSets).ToArray();
         }
 
         public Task<GetHealthCheckStatusResponse> GetHealthCheckStatusAsync(

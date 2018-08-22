@@ -36,31 +36,13 @@ namespace AWSWrapper.ELB
                 ProtocolEnum.HTTP,
                 vpcId,
                 TargetTypeEnum.Ip,
-                healthCheckPath,
+                healthCheckPath: healthCheckPath,
                 healthCheckIntervalSeconds: 30,
                 healthyThresholdCount: 3,
                 unhealthyThresholdCount: 2,
                 healthCheckTimeoutSeconds: 5,
-                cancellationToken: cancellationToken).EnsureSuccessAsync()).TargetGroups.Single();
-
-        public static async Task<TargetGroup> CreateHttpsTargetGroupAsync(
-            this ELBHelper elbh,
-            string name,
-            int port,
-            string vpcId,
-            string healthCheckPath,
-            CancellationToken cancellationToken = default(CancellationToken))
-            => (await elbh.CreateTargetGroupAsync(
-                name,
-                port,
-                ProtocolEnum.HTTPS,
-                vpcId,
-                TargetTypeEnum.Ip,
-                healthCheckPath,
-                healthCheckIntervalSeconds: 30,
-                healthyThresholdCount: 3,
-                unhealthyThresholdCount: 2,
-                healthCheckTimeoutSeconds: 5,
+                healthCheckProtocol: ProtocolEnum.HTTP,
+                healthCheckPort: null, //traffic port
                 cancellationToken: cancellationToken).EnsureSuccessAsync()).TargetGroups.Single();
 
         public static async Task<Listener> CreateHttpListenerAsync(
@@ -83,24 +65,17 @@ namespace AWSWrapper.ELB
             this ELBHelper elbh,
             string loadBalancerArn,
             string targetGroupArn,
-            int port,
+            string certificateArn,
             CancellationToken cancellationToken = default(CancellationToken))
-        {
-
-
-
-            var l = (await elbh.CreateListenerAsync(
-                port,
+            => (await elbh.CreateListenerAsync(
+                443,
                 ProtocolEnum.HTTPS,
                 loadBalancerArn,
                 targetGroupArn,
                 ActionTypeEnum.Forward,
-                null,
+                new Certificate[] { new Certificate() { CertificateArn = certificateArn } },
                 "ELBSecurityPolicy-2016-08",
                 cancellationToken).EnsureSuccessAsync()).Listeners.Single();
-
-            return l;
-        }
 
         public static async Task<IEnumerable<string>> ListListenersAsync(this ELBHelper elbh, string loadBalancerArn, CancellationToken cancellationToken = default(CancellationToken))
            => (await elbh.DescribeListenersAsync(loadBalancerArn)).Select(x => x.ListenerArn);
