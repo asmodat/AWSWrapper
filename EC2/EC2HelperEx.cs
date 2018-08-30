@@ -29,6 +29,18 @@ namespace AWSWrapper.EC2
             }
         }
 
+        public static SummaryStatus ToSummaryStatus(this InstanceSummaryStatus status)
+        {
+            switch (status)
+            {
+                case InstanceSummaryStatus.Initializing: return SummaryStatus.Initializing;
+                case InstanceSummaryStatus.InsufficientData: return SummaryStatus.InsufficientData;
+                case InstanceSummaryStatus.NotApplicable: return SummaryStatus.NotApplicable;
+                case InstanceSummaryStatus.Ok: return SummaryStatus.Ok;
+                default: throw new Exception($"Unrecognized instance summary status: {status.ToString()}");
+            }
+        }
+
         public static async Task AwaitInstanceStateCode(this EC2Helper ec2, string instanceId, InstanceStateCode instanceStateCode, int timeout_ms, int intensity = 1500, CancellationToken cancellationToken = default(CancellationToken))
         {
             var sw = Stopwatch.StartNew();
@@ -45,6 +57,24 @@ namespace AWSWrapper.EC2
             while (sw.ElapsedMilliseconds < timeout_ms);
 
             throw new TimeoutException($"Instance {instanceId} could not reach state code {instanceStateCode.ToString()}, last state: {status?.InstanceState?.Code.ToEnumStringOrDefault<InstanceStateCode>($"<convertion failure of value {status?.InstanceState?.Code}>")}");
+        }
+
+        public static async Task AwaitInstanceStatus(this EC2Helper ec2, string instanceId, InstanceSummaryStatus summaryStatus, int timeout_ms, int intensity = 1500, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var sw = Stopwatch.StartNew();
+            InstanceStatus status = null;
+            do
+            {
+                if (status != null)
+                    await Task.Delay(intensity);
+
+                status = await ec2.DescribeInstanceStatusAsync(instanceId, cancellationToken);
+                if (status.Status.Status == summaryStatus.ToSummaryStatus())
+                    return;
+            }
+            while (sw.ElapsedMilliseconds < timeout_ms);
+
+            throw new TimeoutException($"Instance {instanceId} could not reach status summary '{summaryStatus}', last status summary: '{status.Status.Status}'");
         }
 
         public static string GetTagValueOrDefault(this Instance instance, string key)
@@ -85,5 +115,8 @@ namespace AWSWrapper.EC2
             var resp = await ec2.TerminateInstancesAsync(new List<string>() { instanceId }, cancellationToken: cancellationToken);
             return resp.TerminatingInstances.FirstOrDefault(x => x.InstanceId == instanceId);
         }
+
+        public static Task<DeleteTagsResponse> DeleteAllInstanceTags(this EC2Helper ec2, string instanceId, CancellationToken cancellationToken = default(CancellationToken))
+            => ec2.DeleteTagsAsync(new List<string>() { instanceId }, tags: null, cancellationToken: cancellationToken);
     }
 }

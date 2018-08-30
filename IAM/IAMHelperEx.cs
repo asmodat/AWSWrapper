@@ -103,7 +103,10 @@ $@"{{
             return await iam.DeletePolicyAsync(policy.Arn, cancellationToken);
         }
 
-        public static async Task<(DeleteRoleResponse role, DetachRolePolicyResponse[] policies)> DeleteRoleAsync(this IAMHelper iam, string roleName, bool detachPolicies, StringComparison stringComparison = StringComparison.InvariantCultureIgnoreCase, CancellationToken cancellationToken = default(CancellationToken))
+        public static async Task<(DeleteRoleResponse role, DetachRolePolicyResponse[] policies)> DeleteRoleAsync(
+            this IAMHelper iam, string roleName, bool detachPolicies,
+            bool deleteInstanceProfiles = false,
+            StringComparison stringComparison = StringComparison.InvariantCultureIgnoreCase, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (roleName.IsNullOrEmpty())
                 throw new ArgumentException($"{nameof(roleName)} is null or empty");
@@ -117,6 +120,9 @@ $@"{{
                 , maxDegreeOfParallelism: iam._maxDegreeOfParalelism);
             }
 
+            if(deleteInstanceProfiles)
+                await iam.DeleteRoleInstanceProfiles(roleName: roleName, cancellationToken: cancellationToken);
+
             return (await iam.DeleteRoleAsync(roleName, cancellationToken), detachRolePolicyResponses);
         }
 
@@ -124,6 +130,7 @@ $@"{{
             this IAMHelper iam, string roleName,
             string[] policies,
             string roleDescription = null,
+            bool createInstanceProfile = false,
             StringComparison stringComparison = StringComparison.InvariantCultureIgnoreCase,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -144,7 +151,34 @@ $@"{{
             await mp.ForEachAsync(p => iam.AttachRolePolicyAsync(roleResponse.Role.RoleName, p.Arn, cancellationToken), 
                 iam._maxDegreeOfParalelism, cancellationToken: cancellationToken);
 
+            //https://aws.amazon.com/premiumsupport/knowledge-center/iam-role-not-in-list/
+            if (createInstanceProfile)
+            {
+                await iam.DeleteRoleInstanceProfiles(roleName: roleName, cancellationToken: cancellationToken);
+                await iam.CreateInstanceProfileAsync(name: roleName, cancellationToken: cancellationToken);
+                await iam.AddRoleToInstanceProfileAsync(profileName: roleName, roleName: roleName, cancellationToken: cancellationToken);
+            }
+            
             return roleResponse.Role;
+        }
+
+        public static async Task<DeleteInstanceProfileResponse[]> DeleteRoleInstanceProfiles(
+            this IAMHelper iam, string roleName, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var profiles = await iam.ListInstanceProfilesForRoleAsync(roleName: roleName, cancellationToken: cancellationToken);
+            var responses = await profiles?.ForEachAsync(async profile =>
+            {
+                await iam.RemoveRoleFromInstanceProfileAsync(
+                    profileName: profile.InstanceProfileName,
+                    roleName: roleName, 
+                    cancellationToken: cancellationToken);
+
+                return await iam.DeleteInstanceProfileAsync(profile.InstanceProfileName, cancellationToken: cancellationToken);
+            },
+            maxDegreeOfParallelism: iam._maxDegreeOfParalelism,
+            cancellationToken: cancellationToken);
+
+            return responses;
         }
     }
 }

@@ -49,6 +49,46 @@ namespace AWSWrapper.IAM
                     AssumeRolePolicyDocument = assumeRolePolicyDocument, Path = path },
                 cancellationToken).EnsureSuccessAsync();
 
+        public Task<CreateInstanceProfileResponse> CreateInstanceProfileAsync(
+            string name,
+            CancellationToken cancellationToken = default(CancellationToken))
+            => _IAMClient.CreateInstanceProfileAsync(
+                new CreateInstanceProfileRequest()
+                {
+                    InstanceProfileName = name
+                },
+                cancellationToken).EnsureSuccessAsync();
+
+        public Task<DeleteInstanceProfileResponse> DeleteInstanceProfileAsync(
+            string name,
+            CancellationToken cancellationToken = default(CancellationToken))
+            => _IAMClient.DeleteInstanceProfileAsync(
+                new DeleteInstanceProfileRequest() { InstanceProfileName = name, },
+                cancellationToken).EnsureSuccessAsync();
+
+        public Task<RemoveRoleFromInstanceProfileResponse> RemoveRoleFromInstanceProfileAsync(
+           string profileName,
+           string roleName,
+           CancellationToken cancellationToken = default(CancellationToken))
+           => _IAMClient.RemoveRoleFromInstanceProfileAsync(
+               new RemoveRoleFromInstanceProfileRequest() {
+                   InstanceProfileName = profileName,
+                   RoleName = roleName
+               },
+               cancellationToken).EnsureSuccessAsync();
+
+        public Task<AddRoleToInstanceProfileResponse> AddRoleToInstanceProfileAsync(
+            string profileName,
+            string roleName,
+            CancellationToken cancellationToken = default(CancellationToken))
+            => _IAMClient.AddRoleToInstanceProfileAsync(
+                new AddRoleToInstanceProfileRequest()
+                {
+                    InstanceProfileName = profileName,
+                    RoleName = roleName
+                },
+                cancellationToken).EnsureSuccessAsync();
+
         public Task<AttachRolePolicyResponse> AttachRolePolicyAsync(
             string roleName,
             string policyArn,
@@ -94,6 +134,54 @@ namespace AWSWrapper.IAM
             {
                 if(!response.Policies.IsNullOrEmpty())
                     results.AddRange(response.Policies);
+
+                if (!response.IsTruncated)
+                    break;
+
+                nextToken = response.Marker;
+            }
+
+            return results.ToArray();
+        }
+
+        public async Task<InstanceProfile[]> ListInstanceProfilesAsync(string pathPrefx = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            string nextToken = null;
+            ListInstanceProfilesResponse response;
+            var results = new List<InstanceProfile>();
+            while ((response = await _IAMClient.ListInstanceProfilesAsync(new ListInstanceProfilesRequest()
+            {
+                MaxItems = 100,
+                Marker = nextToken,
+                PathPrefix = pathPrefx
+            }, cancellationToken).EnsureSuccessAsync()) != null)
+            {
+                if (!response.InstanceProfiles.IsNullOrEmpty())
+                    results.AddRange(response.InstanceProfiles);
+
+                if (!response.IsTruncated)
+                    break;
+
+                nextToken = response.Marker;
+            }
+
+            return results.ToArray();
+        }
+
+        public async Task<InstanceProfile[]> ListInstanceProfilesForRoleAsync(string roleName, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            string nextToken = null;
+            ListInstanceProfilesForRoleResponse response;
+            var results = new List<InstanceProfile>();
+            while ((response = await _IAMClient.ListInstanceProfilesForRoleAsync(new ListInstanceProfilesForRoleRequest()
+            {
+                MaxItems = 100,
+                Marker = nextToken,
+                RoleName = roleName
+            }, cancellationToken).EnsureSuccessAsync()) != null)
+            {
+                if (!response.InstanceProfiles.IsNullOrEmpty())
+                    results.AddRange(response.InstanceProfiles);
 
                 if (!response.IsTruncated)
                     break;

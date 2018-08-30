@@ -33,6 +33,14 @@ namespace AWSWrapper.EC2
             stopped = 80
         }
 
+        public enum InstanceSummaryStatus
+        {
+            Initializing = 1,
+            InsufficientData = 1 << 1,
+            NotApplicable = 1 << 2,
+            Ok = 1 << 3
+        }
+
         public enum InstanceModel
         {
             T2Nano = 1,
@@ -157,6 +165,13 @@ namespace AWSWrapper.EC2
             => _client.TerminateInstancesAsync(new TerminateInstancesRequest()
             {
                 InstanceIds = instanceIds
+            }, cancellationToken).EnsureSuccessAsync();
+
+        public Task<DeleteTagsResponse> DeleteTagsAsync(List<string> resourceIds, Dictionary<string, string> tags, CancellationToken cancellationToken = default(CancellationToken))
+            => _client.DeleteTagsAsync(new DeleteTagsRequest()
+            {
+               Resources = resourceIds,
+               Tags = tags?.Select(x => new Tag(x.Key, x.Value))?.ToList()
             }, cancellationToken).EnsureSuccessAsync();
     }
 }

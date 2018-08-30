@@ -16,7 +16,25 @@ namespace AWSWrapper.S3
 {
     public static class S3HelperEx
     {
-        public static async Task<bool> ObjectExistsAsync(this S3Helper s3,
+        public static async Task CreateDirectory(this S3Helper s3,
+            string bucketName,
+            string path,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var key = $"{path.Trim('/')}/";
+
+            if (await s3.ObjectExistsAsync(bucketName: bucketName, key: key))
+                return; //already exists
+
+            var stream = new MemoryStream(new byte[0]);
+
+            var obj = await s3.UploadStreamAsync(bucketName: bucketName,
+                key: key,
+                inputStream: stream,
+                cancellationToken: cancellationToken);
+        }
+
+            public static async Task<bool> ObjectExistsAsync(this S3Helper s3,
             string bucketName,
             string key,
             CancellationToken cancellationToken = default(CancellationToken))
@@ -103,6 +121,40 @@ namespace AWSWrapper.S3
                 cancellationToken: cancellationToken);
 
             return (encoding ?? Encoding.UTF8).GetString(obj.ResponseStream.ToArray(bufferSize: 256 * 1024));
+        }
+
+        public static async Task<FileInfo> DownloadObjectAsync(this S3Helper s3,
+            string bucketName,
+            string key,
+            string outputFile,
+            string version,
+            string eTag,
+            bool @override,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var fi = new FileInfo(outputFile);
+            if (fi.Exists)
+            {
+                if (@override)
+                    fi.Delete();
+                else
+                    throw new Exception($"Can't download '{bucketName}/{key}', becuause output file '{fi.FullName}' already exists.");
+            }
+
+            var obj = await s3.GetObjectAsync(
+                bucketName: bucketName,
+                key: key,
+                versionId: version,
+                eTag: eTag,
+                cancellationToken: cancellationToken);
+
+            var buffSize = 1024 * 1024;
+            using (var fw = File.Create(outputFile, buffSize))
+               await obj.ResponseStream.CopyToAsync(fw, buffSize);
+
+            fi.Refresh();
+
+            return fi;
         }
 
         public static Task<string> UploadTextAsync(this S3Helper s3,

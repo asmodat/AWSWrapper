@@ -72,22 +72,33 @@ namespace AWSWrapper.S3
                 Key = key,
             }, cancellationToken).EnsureSuccessAsync();
 
-        public Task<DeleteObjectResponse> DeleteObjectAsync(
+        public async Task<bool> DeleteObjectAsync(
             string bucketName,
             string key = null,
             string versionId = null,
-            string keyId = null,
-            string eTag = null,
+            bool throwOnFailure = true,
             CancellationToken cancellationToken = default(CancellationToken))
         {
             var request = new DeleteObjectRequest()
             {
                 BucketName = bucketName,
                 Key = key,
-                VersionId = versionId,
+                VersionId = versionId
             };
 
-            return _S3Client.DeleteObjectAsync(request, cancellationToken).EnsureSuccessAsync();
+            var result = await _S3Client.DeleteObjectAsync(request, cancellationToken);
+
+            if (result.HttpStatusCode != System.Net.HttpStatusCode.OK)
+            {
+                var exists = await this.ObjectExistsAsync(bucketName: bucketName, key: key);
+
+                if (exists && throwOnFailure)
+                    throw new Exception($"Object '{key}', still exists in the bucket '{bucketName}'/");
+
+                return !exists;
+            }
+            else
+                return true;
         }
 
         public Task<GetObjectResponse> GetObjectAsync(
