@@ -49,7 +49,14 @@ namespace AWSWrapper.EC2
             T2Medium,
             T2Large,
             T2XLarge,
-            T22XLarge
+            T22XLarge,
+            T3Nano,
+            T3Micro,
+            T3Small,
+            T3Medium,
+            T3Large,
+            T3XLarge,
+            T32XLarge
         }
 
         public EC2Helper(int maxDegreeOfParalelism = 8)
@@ -98,6 +105,7 @@ namespace AWSWrapper.EC2
             ShutdownBehavior shutdownBehavior,
             bool associatePublicIpAddress,
             Dictionary<string, string> tags,
+            bool ebsOptymalized = false,
             CancellationToken cancellationToken = default(CancellationToken))
             => _client.RunInstancesAsync(new RunInstancesRequest()
             {
@@ -130,8 +138,83 @@ namespace AWSWrapper.EC2
                         Tags = tags.Select(x => new Tag(){ Key = x.Key, Value = x.Value }).ToList()
                     }
                 },
+                EbsOptimized = ebsOptymalized
             }, cancellationToken).EnsureSuccessAsync();
 
+        /// <summary>
+        /// For root device naming scheme check: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html
+        /// IOPS range: 100-10'000 GP2, 100-20'000 IO1
+        /// </summary>
+        public Task<RunInstancesResponse> CreateInstanceAsync(
+            string imageId,
+            InstanceType instanceType,
+            string keyName,
+            string securityGroupId,
+            string subnetId,
+            string roleName,
+            ShutdownBehavior shutdownBehavior,
+            bool associatePublicIpAddress,
+            Dictionary<string, string> tags,
+            bool EbsOptymalized,
+            int rootVolumeSize,
+            string rootDeviceName = "/dev/xvda",
+            string rootVolumeType = "GP2",
+            string rootSnapshotId = null,
+            int rootIOPS = 3200,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var blockDeviceMappings = new List<BlockDeviceMapping>()
+            {
+                new BlockDeviceMapping()
+                {
+                    DeviceName = rootDeviceName,
+                    Ebs = new EbsBlockDevice()
+                    {
+                        DeleteOnTermination = true,
+                        VolumeType = VolumeType.FindValue(rootVolumeType),
+                        Iops = rootIOPS,
+                        VolumeSize = rootVolumeSize,
+                        SnapshotId = rootSnapshotId,
+                    }
+                }
+            };
+
+            return _client.RunInstancesAsync(new RunInstancesRequest()
+            {
+                ImageId = imageId,
+                InstanceType = instanceType,
+                MinCount = 1,
+                MaxCount = 1,
+                KeyName = keyName,
+                InstanceInitiatedShutdownBehavior = shutdownBehavior,
+                DisableApiTermination = false,
+                IamInstanceProfile = roleName.IsNullOrEmpty() ? null : new IamInstanceProfileSpecification()
+                {
+                    Name = roleName
+                },
+                NetworkInterfaces = new List<InstanceNetworkInterfaceSpecification>()
+                {
+                    new InstanceNetworkInterfaceSpecification()
+                    {
+                        DeviceIndex = 0,
+                        SubnetId = subnetId,
+                        Groups = new List<string>() { securityGroupId },
+                        AssociatePublicIpAddress = associatePublicIpAddress,
+                        Description = "Primary network interface",
+                        DeleteOnTermination = true,
+                    }
+                },
+                TagSpecifications = new List<TagSpecification>()
+                {
+                    new TagSpecification(){
+                        ResourceType =  ResourceType.Instance,
+                        Tags = tags.Select(x => new Tag(){ Key = x.Key, Value = x.Value }).ToList()
+                    }
+                },
+                EbsOptimized = EbsOptymalized,
+                BlockDeviceMappings = blockDeviceMappings,
+            }, cancellationToken).EnsureSuccessAsync();
+        }
 
         public async Task<InstanceStatus> DescribeInstanceStatusAsync(string instanceId, CancellationToken cancellationToken = default(CancellationToken))
             => (await _client.DescribeInstanceStatusAsync(new DescribeInstanceStatusRequest()

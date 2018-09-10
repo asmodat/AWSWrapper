@@ -25,6 +25,13 @@ namespace AWSWrapper.EC2
                 case InstanceModel.T2Large: return InstanceType.T2Large;
                 case InstanceModel.T2XLarge: return InstanceType.T2Xlarge;
                 case InstanceModel.T22XLarge: return InstanceType.T22xlarge;
+                case InstanceModel.T3Nano: return InstanceType.T3Nano;
+                case InstanceModel.T3Micro: return InstanceType.T3Micro;
+                case InstanceModel.T3Small: return InstanceType.T3Small;
+                case InstanceModel.T3Medium: return InstanceType.T3Medium;
+                case InstanceModel.T3Large: return InstanceType.T3Large;
+                case InstanceModel.T3XLarge: return InstanceType.T3Xlarge;
+                case InstanceModel.T32XLarge: return InstanceType.T32xlarge;
                 default: throw new Exception($"Unrecognized instance model: {model.ToString()}");
             }
         }
@@ -59,7 +66,12 @@ namespace AWSWrapper.EC2
             throw new TimeoutException($"Instance {instanceId} could not reach state code {instanceStateCode.ToString()}, last state: {status?.InstanceState?.Code.ToEnumStringOrDefault<InstanceStateCode>($"<convertion failure of value {status?.InstanceState?.Code}>")}");
         }
 
-        public static async Task AwaitInstanceStatus(this EC2Helper ec2, string instanceId, InstanceSummaryStatus summaryStatus, int timeout_ms, int intensity = 1500, CancellationToken cancellationToken = default(CancellationToken))
+        public static async Task AwaitInstanceStatus(this EC2Helper ec2, 
+            string instanceId, 
+            InstanceSummaryStatus summaryStatus, 
+            int timeout_ms, int intensity = 1500,
+            bool thowOnTermination = true,
+            CancellationToken cancellationToken = default(CancellationToken))
         {
             var sw = Stopwatch.StartNew();
             InstanceStatus status = null;
@@ -71,6 +83,11 @@ namespace AWSWrapper.EC2
                 status = await ec2.DescribeInstanceStatusAsync(instanceId, cancellationToken);
                 if (status.Status.Status == summaryStatus.ToSummaryStatus())
                     return;
+
+                if (thowOnTermination &&
+                    (status.InstanceState?.Name == InstanceStateName.Stopping ||
+                    status.InstanceState?.Name == InstanceStateName.Terminated))
+                    throw new Exception($"Failed Status Await, Instane is terminated or terminating: '{status.InstanceState.Name}'");
             }
             while (sw.ElapsedMilliseconds < timeout_ms);
 
