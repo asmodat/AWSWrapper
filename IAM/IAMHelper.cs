@@ -120,15 +120,14 @@ namespace AWSWrapper.IAM
 
         public async Task<ManagedPolicy[]> ListPoliciesAsync(string pathPrefx = null, bool onlyAttached = false, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string nextToken = null;
-            ListPoliciesResponse response;
+            ListPoliciesResponse response = null;
             var results = new List<ManagedPolicy>();
             while ((response = await _IAMClient.ListPoliciesAsync(new ListPoliciesRequest()
             {
                 MaxItems = 1000,
                 Scope = PolicyScopeType.All,
                 OnlyAttached = onlyAttached,
-                Marker = nextToken,
+                Marker = response?.Marker,
                 PathPrefix = pathPrefx
             }, cancellationToken).EnsureSuccessAsync()) != null)
             {
@@ -137,8 +136,6 @@ namespace AWSWrapper.IAM
 
                 if (!response.IsTruncated)
                     break;
-
-                nextToken = response.Marker;
             }
 
             return results.ToArray();
@@ -146,14 +143,13 @@ namespace AWSWrapper.IAM
 
         public async Task<InstanceProfile[]> ListInstanceProfilesAsync(string pathPrefx = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string nextToken = null;
-            ListInstanceProfilesResponse response;
+            ListInstanceProfilesResponse response = null;
             var results = new List<InstanceProfile>();
             while ((response = await _IAMClient.ListInstanceProfilesAsync(new ListInstanceProfilesRequest()
             {
                 MaxItems = 100,
-                Marker = nextToken,
-                PathPrefix = pathPrefx
+                Marker = response?.Marker,
+                PathPrefix = pathPrefx,
             }, cancellationToken).EnsureSuccessAsync()) != null)
             {
                 if (!response.InstanceProfiles.IsNullOrEmpty())
@@ -161,8 +157,6 @@ namespace AWSWrapper.IAM
 
                 if (!response.IsTruncated)
                     break;
-
-                nextToken = response.Marker;
             }
 
             return results.ToArray();
@@ -170,13 +164,12 @@ namespace AWSWrapper.IAM
 
         public async Task<InstanceProfile[]> ListInstanceProfilesForRoleAsync(string roleName, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string nextToken = null;
-            ListInstanceProfilesForRoleResponse response;
+            ListInstanceProfilesForRoleResponse response = null;
             var results = new List<InstanceProfile>();
             while ((response = await _IAMClient.ListInstanceProfilesForRoleAsync(new ListInstanceProfilesForRoleRequest()
             {
                 MaxItems = 100,
-                Marker = nextToken,
+                Marker = response?.Marker,
                 RoleName = roleName
             }, cancellationToken).EnsureSuccessAsync()) != null)
             {
@@ -185,8 +178,6 @@ namespace AWSWrapper.IAM
 
                 if (!response.IsTruncated)
                     break;
-
-                nextToken = response.Marker;
             }
 
             return results.ToArray();
@@ -194,13 +185,12 @@ namespace AWSWrapper.IAM
 
         public async Task<string[]> ListRolePoliciesAsync(string roleName, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string nextToken = null;
-            ListRolePoliciesResponse response;
+            ListRolePoliciesResponse response = null;
             var results = new List<string>();
             while ((response = await _IAMClient.ListRolePoliciesAsync(new ListRolePoliciesRequest()
             {
                 MaxItems = 1000,
-                Marker = nextToken,
+                Marker = response?.Marker,
                 RoleName = roleName
             }, cancellationToken).EnsureSuccessAsync()) != null)
             {
@@ -209,8 +199,6 @@ namespace AWSWrapper.IAM
 
                 if (!response.IsTruncated)
                     break;
-
-                nextToken = response.Marker;
             }
 
             return results.ToArray();
@@ -218,13 +206,12 @@ namespace AWSWrapper.IAM
 
         public async Task<AttachedPolicyType[]> ListAttachedRolePoliciesAsync(string roleName, string patchPrefix = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string nextToken = null;
-            ListAttachedRolePoliciesResponse response;
+            ListAttachedRolePoliciesResponse response = null;
             var results = new List<AttachedPolicyType>();
             while ((response = await _IAMClient.ListAttachedRolePoliciesAsync(new ListAttachedRolePoliciesRequest()
             {
                 MaxItems = 1000,
-                Marker = nextToken,
+                Marker = response?.Marker,
                 RoleName = roleName,
                 PathPrefix = patchPrefix
             }, cancellationToken).EnsureSuccessAsync()) != null)
@@ -234,8 +221,6 @@ namespace AWSWrapper.IAM
 
                 if (!response.IsTruncated)
                     break;
-
-                nextToken = response.Marker;
             }
 
             return results.ToArray();
@@ -253,13 +238,12 @@ namespace AWSWrapper.IAM
 
         public async Task<Role[]> ListRolesAsync(string pathPrefx = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string nextToken = null;
-            ListRolesResponse response;
+            ListRolesResponse response = null;
             var results = new List<Role>();
             while ((response = await _IAMClient.ListRolesAsync(new ListRolesRequest()
             {
                 MaxItems = 1000,
-                Marker = nextToken,
+                Marker = response?.Marker,
                 PathPrefix = pathPrefx
             }, cancellationToken).EnsureSuccessAsync()) != null)
             {
@@ -268,10 +252,8 @@ namespace AWSWrapper.IAM
 
                 results.AddRange(response.Roles);
 
-                if (response.Marker.IsNullOrEmpty())
+                if (!response.IsTruncated)
                     break;
-
-                nextToken = response.Marker;
             }
 
             return results.ToArray();
@@ -279,11 +261,10 @@ namespace AWSWrapper.IAM
 
         public async Task<AccessKeyMetadata[]> ListAccessKeysAsync(string userName = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string nextToken = null;
-            ListAccessKeysResponse response;
+            ListAccessKeysResponse response = null;
             var results = new List<AccessKeyMetadata>();
             while ((response = await _IAMClient.ListAccessKeysAsync(new ListAccessKeysRequest() {
-                Marker = nextToken,
+                Marker = response?.Marker,
                 MaxItems = 1000,
                 UserName = userName
             }, cancellationToken).EnsureSuccessAsync()) != null)
@@ -293,8 +274,6 @@ namespace AWSWrapper.IAM
 
                 if (!response.IsTruncated)
                     break;
-
-                nextToken = response.Marker;
             }
 
             return results.ToArray();
@@ -302,12 +281,11 @@ namespace AWSWrapper.IAM
 
         public async Task<PolicyVersion[]> ListPolicyVersionsAsync(string arn, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string nextToken = null;
-            ListPolicyVersionsResponse response;
+            ListPolicyVersionsResponse response = null;
             var results = new List<PolicyVersion>();
             while ((response = await _IAMClient.ListPolicyVersionsAsync(new ListPolicyVersionsRequest()
             {
-                Marker = nextToken,
+                Marker = response?.Marker,
                 MaxItems = 1000,
                 PolicyArn = arn
             }, cancellationToken).EnsureSuccessAsync()) != null)
@@ -317,8 +295,6 @@ namespace AWSWrapper.IAM
 
                 if (!response.IsTruncated)
                     break;
-
-                nextToken = response.Marker;
             }
 
             return results.ToArray();

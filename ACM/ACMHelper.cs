@@ -24,12 +24,11 @@ namespace AWSWrapper.ACM
 
         public async Task<CertificateSummary[]> ListCertificatesAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            string nextToken = null;
-            ListCertificatesResponse response;
+            ListCertificatesResponse response = null;
             var results = new List<CertificateSummary>();
             while ((response = await _client.ListCertificatesAsync(new ListCertificatesRequest()
             {
-                NextToken = nextToken,
+                NextToken = response?.NextToken,
                 MaxItems = 1000
             }, cancellationToken).EnsureSuccessAsync()) != null)
             {
@@ -40,8 +39,6 @@ namespace AWSWrapper.ACM
               
                 if (response.NextToken.IsNullOrEmpty())
                     break;
-
-                nextToken = response.NextToken;
             }
 
             return results.ToArray();

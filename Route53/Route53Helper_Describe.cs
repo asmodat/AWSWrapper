@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using AWSWrapper.Extensions;
 using System.Threading;
+using AsmodatStandard.Extensions.Collections;
 
 namespace AWSWrapper.Route53
 {
@@ -33,24 +34,24 @@ namespace AWSWrapper.Route53
 
         public async Task<IEnumerable<Amazon.Route53.Model.ResourceRecordSet>> ListResourceRecordSetsAsync(string zoneId, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string token = null;
             var list = new List<Amazon.Route53.Model.ResourceRecordSet>();
-            Amazon.Route53.Model.ListResourceRecordSetsResponse response;
+            Amazon.Route53.Model.ListResourceRecordSetsResponse response = null;
             while ((response = await _client.ListResourceRecordSetsAsync(
                 new Amazon.Route53.Model.ListResourceRecordSetsRequest()
                 {
-                    StartRecordIdentifier = token,
-                    HostedZoneId = zoneId
-
+                    StartRecordIdentifier = response?.NextRecordIdentifier,
+                    StartRecordName = response?.NextRecordName,
+                    StartRecordType = response?.NextRecordType,
+                    HostedZoneId = zoneId,
+                    MaxItems = "1000",
                 }, cancellationToken))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
             {
-                if (response?.ResourceRecordSets == null || response.ResourceRecordSets.Count <= 0)
+                if (!response.ResourceRecordSets.IsNullOrEmpty())
+                    list.AddRange(response.ResourceRecordSets);
+                else
                     break;
 
-                list.AddRange(response.ResourceRecordSets);
-
-                token = response.NextRecordIdentifier;
-                if (token == null)
+                if (!response.IsTruncated)
                     break;
             }
 

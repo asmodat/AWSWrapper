@@ -15,15 +15,14 @@ namespace AWSWrapper.ECS
     {
         public async Task<IEnumerable<string>> ListTaskDefinitionsAsync(string familyPrefix)
         {
-            string token = null;
             List<string> list = new List<string>();
-            Amazon.ECS.Model.ListTaskDefinitionsResponse response;
+            Amazon.ECS.Model.ListTaskDefinitionsResponse response = null;
             while ((response = await _client.ListTaskDefinitionsAsync(
                 new Amazon.ECS.Model.ListTaskDefinitionsRequest()
                 {
                     FamilyPrefix = familyPrefix,
                     MaxResults = 100,
-                    NextToken = token
+                    NextToken = response?.NextToken
                 }))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
             {
                 if (response?.TaskDefinitionArns == null || response.TaskDefinitionArns.Count <= 0)
@@ -31,8 +30,7 @@ namespace AWSWrapper.ECS
 
                 list.AddRange(response.TaskDefinitionArns);
 
-                token = response.NextToken;
-                if (token == null)
+                if (response.NextToken.IsNullOrEmpty())
                     break;
             }
 
@@ -42,13 +40,12 @@ namespace AWSWrapper.ECS
 
         public async Task<IEnumerable<string>> ListClustersAsync()
         {
-            string token = null;
             List<string> list = new List<string>();
-            Amazon.ECS.Model.ListClustersResponse response;
+            Amazon.ECS.Model.ListClustersResponse response = null;
             while ((response = await _client.ListClustersAsync(
                 new Amazon.ECS.Model.ListClustersRequest()
                 {
-                    NextToken = token,
+                    NextToken = response?.NextToken,
                     MaxResults = 100
                 }))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
             {
@@ -57,8 +54,7 @@ namespace AWSWrapper.ECS
                 
                 list.AddRange(response.ClusterArns);
 
-                token = response.NextToken;
-                if (token == null)
+                if (response.NextToken.IsNullOrEmpty())
                     break;
             }
 
@@ -68,13 +64,12 @@ namespace AWSWrapper.ECS
 
         public async Task<IEnumerable<string>> ListServicesAsync(string cluster, LaunchType launchType)
         {
-            string token = null;
             List<string> list = new List<string>();
-            Amazon.ECS.Model.ListServicesResponse response;
+            Amazon.ECS.Model.ListServicesResponse response = null;
             while ((response = await _client.ListServicesAsync(
                 new Amazon.ECS.Model.ListServicesRequest()
                 {
-                   NextToken = token,
+                   NextToken = response?.NextToken,
                    Cluster = cluster,
                    MaxResults = 10,
                    LaunchType = launchType
@@ -85,8 +80,7 @@ namespace AWSWrapper.ECS
 
                 list.AddRange(response.ServiceArns);
 
-                token = response.NextToken;
-                if (token == null)
+                if (response.NextToken.IsNullOrEmpty())
                     break;
             }
 
@@ -96,15 +90,15 @@ namespace AWSWrapper.ECS
 
         public async Task<IEnumerable<string>> ListTasksAsync(string cluster, string serviceName)
         {
-            string token = null;
             List<string> list = new List<string>();
-            Amazon.ECS.Model.ListTasksResponse response;
+            Amazon.ECS.Model.ListTasksResponse response = null;
             while ((response = await _client.ListTasksAsync(
                 new Amazon.ECS.Model.ListTasksRequest()
                 {
                     MaxResults = 100,
                     Cluster = cluster,
-                    ServiceName = serviceName
+                    ServiceName = serviceName,
+                    NextToken = response?.NextToken
                 }))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
             {
                 if (response?.TaskArns == null || response.TaskArns.Count <= 0)
@@ -112,8 +106,7 @@ namespace AWSWrapper.ECS
 
                 list.AddRange(response.TaskArns);
 
-                token = response.NextToken;
-                if (token == null)
+                if (response.NextToken.IsNullOrEmpty())
                     break;
             }
 

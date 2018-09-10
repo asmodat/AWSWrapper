@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using AWSWrapper.Extensions;
 using System.Threading;
+using AsmodatStandard.Extensions;
 
 namespace AWSWrapper.ELB
 {
@@ -12,15 +13,14 @@ namespace AWSWrapper.ELB
             string listenerArn,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            string token = null;
             var list = new List<Amazon.ElasticLoadBalancingV2.Model.Certificate>();
-            Amazon.ElasticLoadBalancingV2.Model.DescribeListenerCertificatesResponse response;
+            Amazon.ElasticLoadBalancingV2.Model.DescribeListenerCertificatesResponse response = null;
             while ((response = await _clientV2.DescribeListenerCertificatesAsync(
                 new Amazon.ElasticLoadBalancingV2.Model.DescribeListenerCertificatesRequest()
                 {
                     ListenerArn = listenerArn,
                     PageSize = 100,
-                    Marker = token
+                    Marker = response?.NextMarker
                 }, cancellationToken))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
             {
                 if ((response?.Certificates?.Count ?? 0) <= 0)
@@ -28,8 +28,7 @@ namespace AWSWrapper.ELB
                 
                 list.AddRange(response.Certificates);
 
-                token = response.NextMarker;
-                if (token == null)
+                if (response.NextMarker.IsNullOrEmpty())
                     break;
             }
 
@@ -42,15 +41,14 @@ namespace AWSWrapper.ELB
             IEnumerable<string> loadBalancerArns = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            string token = null;
             var list = new List<Amazon.ElasticLoadBalancingV2.Model.LoadBalancer>();
-            Amazon.ElasticLoadBalancingV2.Model.DescribeLoadBalancersResponse response;
+            Amazon.ElasticLoadBalancingV2.Model.DescribeLoadBalancersResponse response = null;
             while ((response = await _clientV2.DescribeLoadBalancersAsync(
                 new Amazon.ElasticLoadBalancingV2.Model.DescribeLoadBalancersRequest()
                 {
                     LoadBalancerArns = loadBalancerArns?.ToList(),
                     Names = names?.ToList(),
-                    Marker = token
+                    Marker = response?.NextMarker
                 }, cancellationToken))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
             {
                 if (response?.LoadBalancers == null || response.LoadBalancers.Count <= 0)
@@ -58,8 +56,7 @@ namespace AWSWrapper.ELB
 
                 list.AddRange(response.LoadBalancers);
 
-                token = response.NextMarker;
-                if (token == null)
+                if (response.NextMarker.IsNullOrEmpty())
                     break;
             }
 
@@ -71,14 +68,13 @@ namespace AWSWrapper.ELB
             string loadBalancerArn,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            string token = null;
             var list = new List<Amazon.ElasticLoadBalancingV2.Model.Listener>();
-            Amazon.ElasticLoadBalancingV2.Model.DescribeListenersResponse response;
+            Amazon.ElasticLoadBalancingV2.Model.DescribeListenersResponse response = null;
             while ((response = await _clientV2.DescribeListenersAsync(
                 new Amazon.ElasticLoadBalancingV2.Model.DescribeListenersRequest()
                 {
                     LoadBalancerArn = loadBalancerArn,
-                    Marker = token
+                    Marker = response?.NextMarker
                 }, cancellationToken))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
             {
                 if (response?.Listeners == null || response.Listeners.Count <= 0)
@@ -86,8 +82,7 @@ namespace AWSWrapper.ELB
                 
                 list.AddRange(response.Listeners);
 
-                token = response.NextMarker;
-                if (token == null)
+                if (response.NextMarker.IsNullOrEmpty())
                     break;
             }
 
@@ -101,14 +96,13 @@ namespace AWSWrapper.ELB
              IEnumerable<string> targetGroupArns = null, 
              CancellationToken cancellationToken = default(CancellationToken))
         {
-            string token = null;
             var list = new List<Amazon.ElasticLoadBalancingV2.Model.TargetGroup>();
-            Amazon.ElasticLoadBalancingV2.Model.DescribeTargetGroupsResponse response;
+            Amazon.ElasticLoadBalancingV2.Model.DescribeTargetGroupsResponse response = null;
             while ((response = await _clientV2.DescribeTargetGroupsAsync(
                 new Amazon.ElasticLoadBalancingV2.Model.DescribeTargetGroupsRequest()
                 {
                     Names = names?.ToList(),
-                    Marker = token,
+                    Marker = response?.NextMarker,
                     LoadBalancerArn = loadBalancerArn,
                     TargetGroupArns = targetGroupArns?.ToList()
                 }, cancellationToken))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
@@ -118,8 +112,7 @@ namespace AWSWrapper.ELB
 
                 list.AddRange(response.TargetGroups);
 
-                token = response.NextMarker;
-                if (token == null)
+                if (response.NextMarker.IsNullOrEmpty())
                     break;
             }
 

@@ -118,19 +118,18 @@ namespace AWSWrapper.CloudWatch
 
         public async Task<IEnumerable<Metric>> ListHealthChecksAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            string token = null;
             var list = new List<Metric>();
-            ListMetricsResponse response;
+            ListMetricsResponse response = null;
             while ((response = await _client.ListMetricsAsync(new ListMetricsRequest() {
-                NextToken = token
+                NextToken = response?.NextToken
             },cancellationToken))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
             {
                 if ((response.Metrics?.Count ?? 0) != 0)
                     list.AddRange(response.Metrics);
                 else
                     break;
-
-                if ((token = response.NextToken) == null)
+                
+                if (response.NextToken.IsNullOrEmpty())
                     break;
             }
 
@@ -142,12 +141,11 @@ namespace AWSWrapper.CloudWatch
             string alarmNamePrefix = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            string token = null;
             var list = new List<MetricAlarm>();
-            DescribeAlarmsResponse response;
+            DescribeAlarmsResponse response = null;
             while ((response = await _client.DescribeAlarmsAsync(new DescribeAlarmsRequest()
             {
-                NextToken = token,
+                NextToken = response?.NextToken,
                 MaxRecords = 100,
                 AlarmNamePrefix = alarmNamePrefix
             }, cancellationToken))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
@@ -157,7 +155,7 @@ namespace AWSWrapper.CloudWatch
                 else
                     break;
 
-                if ((token = response.NextToken) == null)
+                if (response.NextToken.IsNullOrEmpty())
                     break;
             }
 
