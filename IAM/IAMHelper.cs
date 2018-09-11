@@ -17,7 +17,7 @@ namespace AWSWrapper.IAM
         internal readonly int _maxDegreeOfParalelism;
         internal readonly AmazonIdentityManagementServiceClient _IAMClient;
 
-        public IAMHelper(Credentials credentials, int maxDegreeOfParalelism = 4)
+        public IAMHelper(Credentials credentials, int maxDegreeOfParalelism = 2)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
 

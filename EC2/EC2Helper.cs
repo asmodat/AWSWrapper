@@ -59,7 +59,7 @@ namespace AWSWrapper.EC2
             T32XLarge
         }
 
-        public EC2Helper(int maxDegreeOfParalelism = 4)
+        public EC2Helper(int maxDegreeOfParalelism = 2)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
             _client = new AmazonEC2Client();

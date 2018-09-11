@@ -12,7 +12,7 @@ namespace AWSWrapper.ST
         internal readonly int _maxDegreeOfParalelism;
         internal readonly AmazonSecurityTokenServiceClient _STClient;
 
-        public STHelper(Credentials credentials, int maxDegreeOfParalelism = 4)
+        public STHelper(Credentials credentials, int maxDegreeOfParalelism = 2)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
 

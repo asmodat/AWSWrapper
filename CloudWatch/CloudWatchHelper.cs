@@ -28,7 +28,7 @@ namespace AWSWrapper.CloudWatch
             UnHealthyHostCount = 2,
         }
 
-        public CloudWatchHelper(int maxDegreeOfParalelism = 4)
+        public CloudWatchHelper(int maxDegreeOfParalelism = 2)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
             _client = new AmazonCloudWatchClient();

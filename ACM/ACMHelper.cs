@@ -16,7 +16,7 @@ namespace AWSWrapper.ACM
         internal readonly int _maxDegreeOfParalelism;
         internal readonly AmazonCertificateManagerClient _client;
 
-        public ACMHelper(int maxDegreeOfParalelism = 4)
+        public ACMHelper(int maxDegreeOfParalelism = 2)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
             _client = new AmazonCertificateManagerClient();

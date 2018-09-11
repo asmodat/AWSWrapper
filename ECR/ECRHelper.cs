@@ -16,7 +16,7 @@ namespace AWSWrapper.ECR
         private readonly int _maxDegreeOfParalelism;
         internal readonly AmazonECRClient _ECRClient;
 
-        public ECRHelper(int maxDegreeOfParalelism = 4)
+        public ECRHelper(int maxDegreeOfParalelism = 2)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
             _ECRClient = new AmazonECRClient();

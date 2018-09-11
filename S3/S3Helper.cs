@@ -51,7 +51,7 @@ namespace AWSWrapper.S3
         internal readonly AmazonS3Client _S3Client;
         internal readonly Credentials _credentials;
 
-        public S3Helper(Credentials credentials = null, int maxDegreeOfParalelism = 4)
+        public S3Helper(Credentials credentials = null, int maxDegreeOfParalelism = 2)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
             _credentials = credentials;

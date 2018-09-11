@@ -27,7 +27,7 @@ namespace AWSWrapper.Route53
             Healthy = 2
         }
 
-        public Route53Helper(int maxDegreeOfParalelism = 4)
+        public Route53Helper(int maxDegreeOfParalelism = 2)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
             Initialize();

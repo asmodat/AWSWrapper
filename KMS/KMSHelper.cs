@@ -28,7 +28,7 @@ namespace AWSWrapper.KMS
         internal readonly AmazonKeyManagementServiceClient _KMSClient;
         internal readonly Credentials _credentials = null;
 
-        public KMSHelper(Credentials credentials, int maxDegreeOfParalelism = 4)
+        public KMSHelper(Credentials credentials, int maxDegreeOfParalelism = 2)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
             _credentials = credentials;
