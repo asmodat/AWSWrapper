@@ -51,7 +51,7 @@ namespace AWSWrapper.S3
         internal readonly AmazonS3Client _S3Client;
         internal readonly Credentials _credentials;
 
-        public S3Helper(Credentials credentials = null, int maxDegreeOfParalelism = 8)
+        public S3Helper(Credentials credentials = null, int maxDegreeOfParalelism = 4)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
             _credentials = credentials;
@@ -219,26 +219,23 @@ namespace AWSWrapper.S3
 
         public async Task<S3Object[]> ListObjectsAsync(string bucketName, string prefix, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string nextToken = null;
-            ListObjectsResponse response;
+            ListObjectsResponse response = null;
             var results = new List<S3Object>();
             while ((response = await _S3Client.ListObjectsAsync(new ListObjectsRequest()
             {
-                Marker = nextToken,
+                Marker = response?.NextMarker,
                 BucketName = bucketName,
                 Prefix = prefix,
                 MaxKeys = 100000,
             }, cancellationToken).EnsureSuccessAsync()) != null)
             {
-                if ((response.S3Objects?.Count ?? 0) == 0)
+                if (!response.S3Objects.IsNullOrEmpty())
+                    results.AddRange(response.S3Objects);
+
+                if (!response.IsTruncated)
                     break;
 
-                results.AddRange(response.S3Objects);
-
-                if (response.NextMarker.IsNullOrEmpty())
-                    break;
-
-                nextToken = response.NextMarker;
+                await Task.Delay(100);
             }
 
             return results.ToArray();
@@ -246,33 +243,24 @@ namespace AWSWrapper.S3
 
         public async Task<S3ObjectVersion[]> ListVersionsAsync(string bucketName, string prefix, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string nextIdToken = null;
-            string nextKeyToken = null;
-            ListVersionsResponse response;
+            ListVersionsResponse response = null;
             var results = new List<S3ObjectVersion>();
             while ((response = await _S3Client.ListVersionsAsync(new ListVersionsRequest()
             {
-                VersionIdMarker = nextIdToken,
-                KeyMarker = nextKeyToken,
+                VersionIdMarker = response?.NextVersionIdMarker,
+                KeyMarker = response?.NextKeyMarker,
                 BucketName = bucketName,
                 Prefix = prefix,
                 MaxKeys = 100000,
             }, cancellationToken).EnsureSuccessAsync()) != null)
             {
-                if ((response.Versions?.Count ?? 0) != 0)
+                if (!response.Versions.IsNullOrEmpty())
                     results.AddRange(response.Versions);
 
-                nextIdToken = response.NextVersionIdMarker;
-
-                if (!nextIdToken.IsNullOrEmpty())
-                    nextIdToken = response.NextVersionIdMarker;
-                else if (!nextKeyToken.IsNullOrEmpty())
-                {
-                    nextKeyToken = response.NextKeyMarker;
-                    nextIdToken = null;
-                }
-                else
+                if (!response.IsTruncated)
                     break;
+
+                await Task.Delay(100);
             }
 
             return results.ToArray();

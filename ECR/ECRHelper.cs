@@ -16,7 +16,7 @@ namespace AWSWrapper.ECR
         private readonly int _maxDegreeOfParalelism;
         internal readonly AmazonECRClient _ECRClient;
 
-        public ECRHelper(int maxDegreeOfParalelism = 8)
+        public ECRHelper(int maxDegreeOfParalelism = 4)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
             _ECRClient = new AmazonECRClient();
@@ -42,30 +42,27 @@ namespace AWSWrapper.ECR
 
         public async Task<ImageIdentifier[]> ListImagesAsync(TagStatus tagStatus, string registryId, string repositoryName, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string nextToken = null;
-            ListImagesResponse response;
+            ListImagesResponse response = null;
             List<ImageIdentifier> ids = new List<ImageIdentifier>();
             while ((response = await _ECRClient.ListImagesAsync(new ListImagesRequest()
             {
                 RegistryId = registryId,
                 RepositoryName = repositoryName,
                 MaxResults = 100,
-                NextToken = nextToken,
+                NextToken = response?.NextToken,
                 Filter = new ListImagesFilter()
                 {
                     TagStatus = tagStatus
                 }
             }, cancellationToken).EnsureSuccessAsync()) != null)
             {
-                if ((response.ImageIds?.Count ?? 0) == 0)
-                    break;
-
-                ids.AddRange(response.ImageIds);
+                if (!response.ImageIds.IsNullOrEmpty())
+                    ids.AddRange(response.ImageIds);
 
                 if (response.NextToken.IsNullOrEmpty())
                     break;
 
-                nextToken = response.NextToken;
+                await Task.Delay(100);
             }
 
             return ids.ToArray();

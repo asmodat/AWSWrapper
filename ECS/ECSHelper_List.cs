@@ -25,13 +25,13 @@ namespace AWSWrapper.ECS
                     NextToken = response?.NextToken
                 }))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
             {
-                if (response?.TaskDefinitionArns == null || response.TaskDefinitionArns.Count <= 0)
-                    break;
-
-                list.AddRange(response.TaskDefinitionArns);
+                if (!response.TaskDefinitionArns.IsNullOrEmpty())
+                    list.AddRange(response.TaskDefinitionArns);
 
                 if (response.NextToken.IsNullOrEmpty())
                     break;
+
+                await Task.Delay(100);
             }
 
             response.EnsureSuccess();
@@ -49,13 +49,13 @@ namespace AWSWrapper.ECS
                     MaxResults = 100
                 }))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
             {
-                if (response?.ClusterArns == null || response.ClusterArns.Count <= 0)
-                    break;
-                
-                list.AddRange(response.ClusterArns);
+                if (!response.ClusterArns.IsNullOrEmpty())
+                    list.AddRange(response.ClusterArns);
 
                 if (response.NextToken.IsNullOrEmpty())
                     break;
+
+                await Task.Delay(100);
             }
 
             response.EnsureSuccess();
@@ -75,13 +75,13 @@ namespace AWSWrapper.ECS
                    LaunchType = launchType
                 }))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
             {
-                if (response?.ServiceArns == null || response.ServiceArns.Count <= 0)
-                    break;
-
-                list.AddRange(response.ServiceArns);
+                if (!response.ServiceArns.IsNullOrEmpty())
+                    list.AddRange(response.ServiceArns);
 
                 if (response.NextToken.IsNullOrEmpty())
                     break;
+
+                await Task.Delay(100);
             }
 
             response.EnsureSuccess();
@@ -101,13 +101,13 @@ namespace AWSWrapper.ECS
                     NextToken = response?.NextToken
                 }))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
             {
-                if (response?.TaskArns == null || response.TaskArns.Count <= 0)
-                    break;
-
-                list.AddRange(response.TaskArns);
+                if (!response.TaskArns.IsNullOrEmpty())
+                    list.AddRange(response.TaskArns);
 
                 if (response.NextToken.IsNullOrEmpty())
                     break;
+
+                await Task.Delay(100);
             }
 
             response.EnsureSuccess();

@@ -59,7 +59,7 @@ namespace AWSWrapper.EC2
             T32XLarge
         }
 
-        public EC2Helper(int maxDegreeOfParalelism = 8)
+        public EC2Helper(int maxDegreeOfParalelism = 4)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
             _client = new AmazonEC2Client();
@@ -69,27 +69,24 @@ namespace AWSWrapper.EC2
         {
             var filterList = filters?.Select(x => new Filter(x.Key, x.Value)).ToList();
 
-            string nextToken = null;
-            DescribeInstancesResponse response;
+            DescribeInstancesResponse response = null;
             var results = new List<Reservation>();
             while ((response = await _client.DescribeInstancesAsync(new DescribeInstancesRequest()
             {
                 MaxResults = 1000,
-                NextToken = nextToken,
+                NextToken = response?.NextToken,
                 Filters = filterList,
                 InstanceIds = instanceIds
 
             }, cancellationToken).EnsureSuccessAsync()) != null)
             {
-                if ((response.Reservations?.Count ?? 0) == 0)
-                    break;
-
-                results.AddRange(response.Reservations);
+                if (!response.Reservations.IsNullOrEmpty())
+                    results.AddRange(response.Reservations);
 
                 if (response.NextToken.IsNullOrEmpty())
                     break;
 
-                nextToken = response.NextToken;
+                await Task.Delay(100);
             }
 
             return results.ToArray();

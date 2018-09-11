@@ -10,22 +10,22 @@ namespace AWSWrapper.Route53
     {
         public async Task<IEnumerable<Amazon.Route53.Model.HealthCheck>> ListHealthChecksAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            string token = null;
             var list = new List<Amazon.Route53.Model.HealthCheck>();
-            Amazon.Route53.Model.ListHealthChecksResponse response;
+            Amazon.Route53.Model.ListHealthChecksResponse response = null;
             while ((response = await _client.ListHealthChecksAsync(
                 new Amazon.Route53.Model.ListHealthChecksRequest()
                 {
-                    Marker = token,
+                    Marker = response?.NextMarker,
                     MaxItems = "100"
                 }, cancellationToken))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
             {
-                if ((response.HealthChecks?.Count ?? 0) != 0)
+                if (!response.HealthChecks.IsNullOrEmpty())
                     list.AddRange(response.HealthChecks);
 
-                token = response.NextMarker;
-                if (token == null || response.IsTruncated == false)
+                if (!response.IsTruncated)
                     break;
+
+                await Task.Delay(100);
             }
             
             response.EnsureSuccess();
@@ -48,11 +48,11 @@ namespace AWSWrapper.Route53
             {
                 if (!response.ResourceRecordSets.IsNullOrEmpty())
                     list.AddRange(response.ResourceRecordSets);
-                else
-                    break;
 
                 if (!response.IsTruncated)
                     break;
+
+                await Task.Delay(100);
             }
 
             response.EnsureSuccess();

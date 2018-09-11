@@ -27,7 +27,7 @@ namespace AWSWrapper.Route53
             Healthy = 2
         }
 
-        public Route53Helper(int maxDegreeOfParalelism = 8)
+        public Route53Helper(int maxDegreeOfParalelism = 4)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
             Initialize();
@@ -147,23 +147,19 @@ namespace AWSWrapper.Route53
 
         public async Task<HostedZone[]> ListHostedZonesAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            string nextToken = null;
-            ListHostedZonesResponse response;
+            ListHostedZonesResponse response = null;
             var results = new List<HostedZone>();
             while ((response = await _locker.Lock(() => _client.ListHostedZonesAsync(new ListHostedZonesRequest()
             {
-                Marker = null
+                Marker = response?.NextMarker,
+                
             }, cancellationToken: cancellationToken).EnsureSuccessAsync())) != null)
             {
-                if ((response.HostedZones?.Count ?? 0) == 0)
+                if (!response.HostedZones.IsNullOrEmpty())
+                    results.AddRange(response.HostedZones);
+
+                if (!response.IsTruncated)
                     break;
-
-                results.AddRange(response.HostedZones);
-
-                if (response.NextMarker.IsNullOrEmpty())
-                    break;
-
-                nextToken = response.NextMarker;
             }
 
             return results.ToArray();

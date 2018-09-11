@@ -16,7 +16,7 @@ namespace AWSWrapper.ACM
         internal readonly int _maxDegreeOfParalelism;
         internal readonly AmazonCertificateManagerClient _client;
 
-        public ACMHelper(int maxDegreeOfParalelism = 8)
+        public ACMHelper(int maxDegreeOfParalelism = 4)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
             _client = new AmazonCertificateManagerClient();
@@ -32,13 +32,13 @@ namespace AWSWrapper.ACM
                 MaxItems = 1000
             }, cancellationToken).EnsureSuccessAsync()) != null)
             {
-                if ((response?.CertificateSummaryList?.Count ?? 0) == 0)
-                    break;
-
-                results.AddRange(response.CertificateSummaryList);
+                if (!response.CertificateSummaryList.IsNullOrEmpty())
+                    results.AddRange(response.CertificateSummaryList);
               
                 if (response.NextToken.IsNullOrEmpty())
                     break;
+
+                await Task.Delay(100);
             }
 
             return results.ToArray();

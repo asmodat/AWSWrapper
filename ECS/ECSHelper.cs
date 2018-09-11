@@ -18,7 +18,7 @@ namespace AWSWrapper.ECS
             get => _client;
         }
 
-        public ECSHelper(int maxDegreeOfParalelism = 8)
+        public ECSHelper(int maxDegreeOfParalelism = 4)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
             _client = new AmazonECSClient();

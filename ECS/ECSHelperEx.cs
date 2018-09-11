@@ -28,7 +28,7 @@ namespace AWSWrapper.ECS
         public static async Task<IEnumerable<ServiceInfo>> ListServicesAsync(this ECSHelper ecs)
         {
             var clusetrs = await ecs.ListClustersAsync();
-            var result = await clusetrs.ForEachAsync(cluster => ListServicesAsync(ecs, cluster), 4);
+            var result = await clusetrs.ForEachAsync(cluster => ListServicesAsync(ecs, cluster), 1);
             return result.Flatten();
         }
 

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using AWSWrapper.Extensions;
 using System.Threading;
 using AsmodatStandard.Extensions;
+using AsmodatStandard.Extensions.Collections;
 
 namespace AWSWrapper.ELB
 {
@@ -23,13 +24,13 @@ namespace AWSWrapper.ELB
                     Marker = response?.NextMarker
                 }, cancellationToken))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
             {
-                if ((response?.Certificates?.Count ?? 0) <= 0)
-                    break;
-                
-                list.AddRange(response.Certificates);
+                if (!response.Certificates.IsNullOrEmpty())
+                    list.AddRange(response.Certificates);
 
                 if (response.NextMarker.IsNullOrEmpty())
                     break;
+
+                await Task.Delay(100);
             }
 
             response.EnsureSuccess();
@@ -51,13 +52,13 @@ namespace AWSWrapper.ELB
                     Marker = response?.NextMarker
                 }, cancellationToken))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
             {
-                if (response?.LoadBalancers == null || response.LoadBalancers.Count <= 0)
-                    break;
-
-                list.AddRange(response.LoadBalancers);
+                if (!response.LoadBalancers.IsNullOrEmpty())
+                    list.AddRange(response.LoadBalancers);
 
                 if (response.NextMarker.IsNullOrEmpty())
                     break;
+
+                await Task.Delay(100);
             }
 
             response.EnsureSuccess();
@@ -77,13 +78,13 @@ namespace AWSWrapper.ELB
                     Marker = response?.NextMarker
                 }, cancellationToken))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
             {
-                if (response?.Listeners == null || response.Listeners.Count <= 0)
-                    break;
-                
-                list.AddRange(response.Listeners);
+                if (!response.Listeners.IsNullOrEmpty())
+                    list.AddRange(response.Listeners);
 
                 if (response.NextMarker.IsNullOrEmpty())
                     break;
+
+                await Task.Delay(100);
             }
 
             response.EnsureSuccess();
@@ -107,13 +108,13 @@ namespace AWSWrapper.ELB
                     TargetGroupArns = targetGroupArns?.ToList()
                 }, cancellationToken))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
             {
-                if (response?.TargetGroups == null || response.TargetGroups.Count <= 0)
-                    break;
-
-                list.AddRange(response.TargetGroups);
+                if (!response.TargetGroups.IsNullOrEmpty())
+                    list.AddRange(response.TargetGroups);
 
                 if (response.NextMarker.IsNullOrEmpty())
                     break;
+
+                await Task.Delay(100);
             }
 
             response.EnsureSuccess();

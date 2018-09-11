@@ -28,7 +28,7 @@ namespace AWSWrapper.KMS
         internal readonly AmazonKeyManagementServiceClient _KMSClient;
         internal readonly Credentials _credentials = null;
 
-        public KMSHelper(Credentials credentials, int maxDegreeOfParalelism = 8)
+        public KMSHelper(Credentials credentials, int maxDegreeOfParalelism = 4)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
             _credentials = credentials;
@@ -121,12 +121,11 @@ namespace AWSWrapper.KMS
 
         public async Task<string[]> ListKeyPoliciesAsync(string keyId, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string nextToken = null;
-            ListKeyPoliciesResponse response;
+            ListKeyPoliciesResponse response = null;
             var results = new List<string>();
             while ((response = await _KMSClient.ListKeyPoliciesAsync(new ListKeyPoliciesRequest()
             {
-                Marker = nextToken,
+                Marker = response?.NextMarker,
                 Limit = 1000,
                 KeyId = keyId
             }, cancellationToken).EnsureSuccessAsync()) != null)
@@ -137,7 +136,7 @@ namespace AWSWrapper.KMS
                 if (!response.Truncated)
                     break;
 
-                nextToken = response.NextMarker;
+                await Task.Delay(100);
             }
 
             return results.ToArray();
@@ -145,12 +144,11 @@ namespace AWSWrapper.KMS
         
         public async Task<KeyListEntry[]> ListKeysAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            string nextToken = null;
-            ListKeysResponse response;
+            ListKeysResponse response = null;
             var results = new List<KeyListEntry>();
             while ((response = await _KMSClient.ListKeysAsync(new ListKeysRequest()
             {
-                Marker = nextToken,
+                Marker = response?.NextMarker,
                 Limit = 1000
             }, cancellationToken).EnsureSuccessAsync()) != null)
             {
@@ -160,7 +158,7 @@ namespace AWSWrapper.KMS
                 if (!response.Truncated)
                     break;
 
-                nextToken = response.NextMarker;
+                await Task.Delay(100);
             }
 
             return results.ToArray();
@@ -168,12 +166,11 @@ namespace AWSWrapper.KMS
 
         public async Task<AliasListEntry[]> ListAliasesAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            string nextToken = null;
-            ListAliasesResponse response;
+            ListAliasesResponse response = null;
             var results = new List<AliasListEntry>();
             while ((response = await _KMSClient.ListAliasesAsync(new ListAliasesRequest()
             {
-                Marker = nextToken,
+                Marker = response?.NextMarker,
                 Limit = 1000
             }, cancellationToken).EnsureSuccessAsync()) != null)
             {
@@ -183,7 +180,7 @@ namespace AWSWrapper.KMS
                 if (!response.Truncated)
                     break;
 
-                nextToken = response.NextMarker;
+                await Task.Delay(100);
             }
 
             return results.ToArray();
@@ -191,12 +188,11 @@ namespace AWSWrapper.KMS
 
         public async Task<GrantListEntry[]> ListGrantsAsync(string keyId, CancellationToken cancellationToken = default(CancellationToken))
         {
-            string nextToken = null;
-            ListGrantsResponse response;
+            ListGrantsResponse response = null;
             var results = new List<GrantListEntry>();
             while ((response = await _KMSClient.ListGrantsAsync(new ListGrantsRequest()
             {
-                Marker = nextToken,
+                Marker = response?.NextMarker,
                 Limit = 1000,
                 KeyId = keyId
             }, cancellationToken).EnsureSuccessAsync()) != null)
@@ -207,7 +203,7 @@ namespace AWSWrapper.KMS
                 if (!response.Truncated)
                     break;
 
-                nextToken = response.NextMarker;
+                await Task.Delay(100);
             }
 
             return results.ToArray();

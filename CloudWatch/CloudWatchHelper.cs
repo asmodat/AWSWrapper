@@ -28,7 +28,7 @@ namespace AWSWrapper.CloudWatch
             UnHealthyHostCount = 2,
         }
 
-        public CloudWatchHelper(int maxDegreeOfParalelism = 8)
+        public CloudWatchHelper(int maxDegreeOfParalelism = 4)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
             _client = new AmazonCloudWatchClient();
@@ -124,13 +124,13 @@ namespace AWSWrapper.CloudWatch
                 NextToken = response?.NextToken
             },cancellationToken))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
             {
-                if ((response.Metrics?.Count ?? 0) != 0)
+                if (!response.Metrics.IsNullOrEmpty())
                     list.AddRange(response.Metrics);
-                else
-                    break;
-                
+
                 if (response.NextToken.IsNullOrEmpty())
                     break;
+
+                await Task.Delay(100);
             }
 
             response.EnsureSuccess();
@@ -150,13 +150,13 @@ namespace AWSWrapper.CloudWatch
                 AlarmNamePrefix = alarmNamePrefix
             }, cancellationToken))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
             {
-                if ((response.MetricAlarms?.Count ?? 0) != 0)
+                if (!response.MetricAlarms.IsNullOrEmpty())
                     list.AddRange(response.MetricAlarms);
-                else
-                    break;
 
                 if (response.NextToken.IsNullOrEmpty())
                     break;
+
+                await Task.Delay(100);
             }
 
             response.EnsureSuccess();

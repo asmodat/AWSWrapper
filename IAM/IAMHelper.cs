@@ -17,7 +17,7 @@ namespace AWSWrapper.IAM
         internal readonly int _maxDegreeOfParalelism;
         internal readonly AmazonIdentityManagementServiceClient _IAMClient;
 
-        public IAMHelper(Credentials credentials, int maxDegreeOfParalelism = 8)
+        public IAMHelper(Credentials credentials, int maxDegreeOfParalelism = 4)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
 
@@ -136,6 +136,8 @@ namespace AWSWrapper.IAM
 
                 if (!response.IsTruncated)
                     break;
+
+                await Task.Delay(100);
             }
 
             return results.ToArray();
@@ -157,6 +159,8 @@ namespace AWSWrapper.IAM
 
                 if (!response.IsTruncated)
                     break;
+
+                await Task.Delay(100);
             }
 
             return results.ToArray();
@@ -178,6 +182,8 @@ namespace AWSWrapper.IAM
 
                 if (!response.IsTruncated)
                     break;
+
+                await Task.Delay(100);
             }
 
             return results.ToArray();
@@ -199,6 +205,8 @@ namespace AWSWrapper.IAM
 
                 if (!response.IsTruncated)
                     break;
+
+                await Task.Delay(100);
             }
 
             return results.ToArray();
@@ -221,6 +229,8 @@ namespace AWSWrapper.IAM
 
                 if (!response.IsTruncated)
                     break;
+
+                await Task.Delay(100);
             }
 
             return results.ToArray();
@@ -247,13 +257,13 @@ namespace AWSWrapper.IAM
                 PathPrefix = pathPrefx
             }, cancellationToken).EnsureSuccessAsync()) != null)
             {
-                if ((response.Roles?.Count ?? 0) == 0)
-                    break;
-
-                results.AddRange(response.Roles);
+                if (!response.Roles.IsNullOrEmpty())
+                    results.AddRange(response.Roles);
 
                 if (!response.IsTruncated)
                     break;
+
+                await Task.Delay(100);
             }
 
             return results.ToArray();
@@ -274,6 +284,8 @@ namespace AWSWrapper.IAM
 
                 if (!response.IsTruncated)
                     break;
+
+                await Task.Delay(100);
             }
 
             return results.ToArray();
@@ -295,6 +307,8 @@ namespace AWSWrapper.IAM
 
                 if (!response.IsTruncated)
                     break;
+
+                await Task.Delay(100);
             }
 
             return results.ToArray();

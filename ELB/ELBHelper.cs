@@ -16,7 +16,7 @@ namespace AWSWrapper.ELB
         private readonly AmazonElasticLoadBalancingClient _client;
         private readonly AmazonElasticLoadBalancingV2Client _clientV2;
 
-        public ELBHelper(int maxDegreeOfParalelism = 8)
+        public ELBHelper(int maxDegreeOfParalelism = 4)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
             _client = new AmazonElasticLoadBalancingClient();
