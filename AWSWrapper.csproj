@@ -7,15 +7,15 @@
     <PackageId>Asmodat.AWSWrapper</PackageId>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <PackageReleaseNotes>2018-09-10</PackageReleaseNotes>
-    <Version>1.0.0.26</Version>
+    <Version>1.0.0.27</Version>
     <PackageProjectUrl>https://github.com/asmodat/AWSWrapper</PackageProjectUrl>
     <PackageTags>AWS, Asmodat, Amazon, Amazon SDK Extensions, Amazon SDK, SDK, Extensions, Amazon Web Services</PackageTags>
     <PackageRequireLicenseAcceptance>False</PackageRequireLicenseAcceptance>
     <Company>Asmodat</Company>
     <Authors>Asmodat</Authors>
     <PackageIconUrl>https://avatars3.githubusercontent.com/u/10515811</PackageIconUrl>
-    <AssemblyVersion>1.0.0.26</AssemblyVersion>
-    <FileVersion>1.0.0.26</FileVersion>
+    <AssemblyVersion>1.0.0.27</AssemblyVersion>
+    <FileVersion>1.0.0.27</FileVersion>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">

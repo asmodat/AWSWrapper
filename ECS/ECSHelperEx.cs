@@ -28,7 +28,7 @@ namespace AWSWrapper.ECS
         public static async Task<IEnumerable<ServiceInfo>> ListServicesAsync(this ECSHelper ecs)
         {
             var clusetrs = await ecs.ListClustersAsync();
-            var result = await clusetrs.ForEachAsync(cluster => ListServicesAsync(ecs, cluster), 8);
+            var result = await clusetrs.ForEachAsync(cluster => ListServicesAsync(ecs, cluster), 4);
             return result.Flatten();
         }
 
@@ -188,7 +188,7 @@ namespace AWSWrapper.ECS
                 await ecs.DeregisterTaskDefinitionsAsync(tasks);
         }
 
-        public static async System.Threading.Tasks.Task WaitForServiceToStart(this ECSHelper ecs, string cluster, string serviceName, int timeout)
+        public static async System.Threading.Tasks.Task WaitForServiceToStart(this ECSHelper ecs, string cluster, string serviceName, int timeout, int delay = 2500)
         {
             var services = await ((cluster.IsNullOrEmpty()) ? ecs.ListServicesAsync() : ecs.ListServicesAsync(cluster));
 
@@ -212,8 +212,7 @@ namespace AWSWrapper.ECS
                 if (result.DesiredCount == result.RunningCount)
                     return; //desired count reached
 
-                if (result.PendingCount != 0)
-                    await System.Threading.Tasks.Task.Delay(1000);
+                await System.Threading.Tasks.Task.Delay(delay);
             }
 
             throw new Exception($"Timeout '{timeout}' [s], service: '{service.ARN}' could not reach its desired count in time.");
