@@ -37,10 +37,10 @@ namespace AWSWrapper.ELB
                 vpcId,
                 TargetTypeEnum.Ip,
                 healthCheckPath: healthCheckPath,
-                healthCheckIntervalSeconds: 30,
-                healthyThresholdCount: 3,
-                unhealthyThresholdCount: 2,
-                healthCheckTimeoutSeconds: 5,
+                healthCheckIntervalSeconds: 65,
+                healthyThresholdCount: 2,
+                unhealthyThresholdCount: 3,
+                healthCheckTimeoutSeconds: 60,
                 healthCheckProtocol: ProtocolEnum.HTTP,
                 healthCheckPort: null, //traffic port
                 cancellationToken: cancellationToken).EnsureSuccessAsync()).TargetGroups.Single();
