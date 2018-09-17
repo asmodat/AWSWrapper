@@ -52,7 +52,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Asmodat Standard\Asmodat Standard\Asmodat Standard.csproj" />
+    <ProjectReference Include="..\Asmodat-Standard\Asmodat Standard\Asmodat Standard.csproj" />
   </ItemGroup>
 
 </Project>
