@@ -141,6 +141,30 @@ namespace AWSWrapper.S3
                     throw new Exception($"Can't download '{bucketName}/{key}', becuause output file '{fi.FullName}' already exists.");
             }
 
+            var stream = await DownloadObjectAsync(
+                s3: s3,
+                bucketName: bucketName,
+                key: key,
+                version: version,
+                eTag: eTag,
+                cancellationToken: cancellationToken);
+
+            var buffSize = 1024 * 1024;
+            using (var fw = File.Create(outputFile, buffSize))
+               await stream.CopyToAsync(fw, buffSize);
+
+            fi.Refresh();
+
+            return fi;
+        }
+
+        public static async Task<Stream> DownloadObjectAsync(this S3Helper s3,
+            string bucketName,
+            string key,
+            string version = null,
+            string eTag = null,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
             var obj = await s3.GetObjectAsync(
                 bucketName: bucketName,
                 key: key,
@@ -148,13 +172,27 @@ namespace AWSWrapper.S3
                 eTag: eTag,
                 cancellationToken: cancellationToken);
 
-            var buffSize = 1024 * 1024;
-            using (var fw = File.Create(outputFile, buffSize))
-               await obj.ResponseStream.CopyToAsync(fw, buffSize);
+            return obj.ResponseStream;
+        }
 
-            fi.Refresh();
+        public static async Task<T> DownloadJsonAsync<T>(this S3Helper s3,
+            string bucketName,
+            string key,
+            string version = null,
+            string eTag = null,
+            Encoding encoding = null,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var stream = await s3.DownloadObjectAsync(
+                bucketName: bucketName,
+                key: key,
+                version: version,
+                eTag: eTag,
+                cancellationToken: cancellationToken);
 
-            return fi;
+            return await stream
+                .ToStringAsync(encoding ?? Encoding.UTF8)
+                .JsonDeserializeAsync<T>();
         }
 
         public static Task<string> UploadTextAsync(this S3Helper s3,
@@ -176,8 +214,13 @@ namespace AWSWrapper.S3
         Stream inputStream,
         string keyId = null,
         string contentType = "application/octet-stream",
+        bool throwIfAlreadyExists = false,
         CancellationToken cancellationToken = default(CancellationToken))
         {
+            if (throwIfAlreadyExists &&
+                await s3.ObjectExistsAsync(bucketName: bucketName, key: key))
+                throw new Exception($"Object {key} in bucket {bucketName} already exists.");
+
             if (keyId == "")
                 keyId = null;
             
@@ -227,6 +270,34 @@ namespace AWSWrapper.S3
                 cancellationToken: cancellationToken);
 
             return mpResult.ETag.Trim('"');
+        }
+
+        public static async Task<DeleteObjectsResponse> DeleteObjectsModifiedBeforeDateAsync(this S3Helper s3,
+            string bucketName,
+            string prefix,
+            DateTime dt,
+            bool throwIfNotFound,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var list = await s3.ListObjectsAsync(bucketName: bucketName, prefix: prefix, cancellationToken: cancellationToken);
+            var toDelete = list.Where(x => x.LastModified.Ticks < dt.Ticks).Select(x => new KeyVersion() {
+                Key = x.Key,
+            }).ToArray();
+
+            if (toDelete.IsNullOrEmpty())
+            {
+                if (throwIfNotFound)
+                    throw new Exception($"Found {list?.Length ?? 0} objects with prefix {prefix} in bucket {bucketName}, but none were marked for deletion.");
+                else
+                    return null;
+            }
+
+            var deleted = await s3.DeleteObjectsAsync(bucketName: bucketName, objects: toDelete, cancellationToken: cancellationToken);
+
+            if (!deleted.DeleteErrors.IsNullOrEmpty())
+                throw new Exception($"Deleted {deleted.DeletedObjects.Count} objects, but failed {deleted.DeleteErrors.Count}, due to following errors: {deleted.DeleteErrors.JsonSerialize()}");
+
+            return deleted;
         }
     }
 }

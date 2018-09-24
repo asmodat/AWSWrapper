@@ -25,7 +25,7 @@ namespace AWSWrapper.KMS
         }
 
         internal readonly int _maxDegreeOfParalelism;
-        internal readonly AmazonKeyManagementServiceClient _KMSClient;
+        internal readonly AmazonKeyManagementServiceClient _client;
         internal readonly Credentials _credentials = null;
 
         public KMSHelper(Credentials credentials, int maxDegreeOfParalelism = 2)
@@ -35,11 +35,11 @@ namespace AWSWrapper.KMS
 
             if (credentials != null)
             {
-                _KMSClient = new AmazonKeyManagementServiceClient(credentials);
+                _client = new AmazonKeyManagementServiceClient(credentials);
             }
             else
             {
-                _KMSClient = new AmazonKeyManagementServiceClient();
+                _client = new AmazonKeyManagementServiceClient();
             }
         }
 
@@ -70,7 +70,7 @@ namespace AWSWrapper.KMS
             if ((grant & GrantType.Describe) != 0)
                 opList.Add(GrantOperation.DescribeKey);
 
-            return _KMSClient.CreateGrantAsync(
+            return _client.CreateGrantAsync(
                 new CreateGrantRequest()
                 {
                     KeyId = keyId,
@@ -85,7 +85,7 @@ namespace AWSWrapper.KMS
             string keyId,
             string grantId,
             CancellationToken cancellationToken = default(CancellationToken))
-            => _KMSClient.RetireGrantAsync(
+            => _client.RetireGrantAsync(
                 new RetireGrantRequest()
                 {
                     KeyId = keyId,
@@ -99,7 +99,7 @@ namespace AWSWrapper.KMS
             string policy,
             bool bypassPolicyLockoutSafetyCheck = false,
             CancellationToken cancellationToken = default(CancellationToken))
-            => _KMSClient.PutKeyPolicyAsync(
+            => _client.PutKeyPolicyAsync(
                 new PutKeyPolicyRequest() {
                     KeyId = keyId,
                     Policy = policy,
@@ -112,7 +112,7 @@ namespace AWSWrapper.KMS
         string keyId,
         string policyName,
         CancellationToken cancellationToken = default(CancellationToken))
-        => _KMSClient.GetKeyPolicyAsync(
+        => _client.GetKeyPolicyAsync(
             new GetKeyPolicyRequest() {
                     KeyId = keyId,
                     PolicyName = policyName
@@ -123,7 +123,7 @@ namespace AWSWrapper.KMS
         {
             ListKeyPoliciesResponse response = null;
             var results = new List<string>();
-            while ((response = await _KMSClient.ListKeyPoliciesAsync(new ListKeyPoliciesRequest()
+            while ((response = await _client.ListKeyPoliciesAsync(new ListKeyPoliciesRequest()
             {
                 Marker = response?.NextMarker,
                 Limit = 1000,
@@ -146,7 +146,7 @@ namespace AWSWrapper.KMS
         {
             ListKeysResponse response = null;
             var results = new List<KeyListEntry>();
-            while ((response = await _KMSClient.ListKeysAsync(new ListKeysRequest()
+            while ((response = await _client.ListKeysAsync(new ListKeysRequest()
             {
                 Marker = response?.NextMarker,
                 Limit = 1000
@@ -168,7 +168,7 @@ namespace AWSWrapper.KMS
         {
             ListAliasesResponse response = null;
             var results = new List<AliasListEntry>();
-            while ((response = await _KMSClient.ListAliasesAsync(new ListAliasesRequest()
+            while ((response = await _client.ListAliasesAsync(new ListAliasesRequest()
             {
                 Marker = response?.NextMarker,
                 Limit = 1000
@@ -190,7 +190,7 @@ namespace AWSWrapper.KMS
         {
             ListGrantsResponse response = null;
             var results = new List<GrantListEntry>();
-            while ((response = await _KMSClient.ListGrantsAsync(new ListGrantsRequest()
+            while ((response = await _client.ListGrantsAsync(new ListGrantsRequest()
             {
                 Marker = response?.NextMarker,
                 Limit = 1000,

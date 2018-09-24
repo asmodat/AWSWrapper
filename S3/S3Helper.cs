@@ -138,14 +138,25 @@ namespace AWSWrapper.S3
             string contentType,
             string keyId = null,
             CancellationToken cancellationToken = default(CancellationToken))
-            => _S3Client.InitiateMultipartUploadAsync(
-                new InitiateMultipartUploadRequest() {
+        {
+            var request = keyId == null ?
+                new InitiateMultipartUploadRequest()
+                {
+                    BucketName = bucketName,
+                    Key = key,
+                    ContentType = contentType
+                } : new InitiateMultipartUploadRequest()
+                {
                     BucketName = bucketName,
                     Key = key,
                     ContentType = contentType,
-                    ServerSideEncryptionKeyManagementServiceKeyId = keyId
-                }, 
-                cancellationToken).EnsureSuccessAsync();
+                    ServerSideEncryptionKeyManagementServiceKeyId = keyId,
+                    ServerSideEncryptionMethod = ServerSideEncryptionMethod.AWSKMS
+                };
+
+            return _S3Client.InitiateMultipartUploadAsync(request, cancellationToken)
+                .EnsureSuccessAsync();
+        }
 
         public Task<PutObjectResponse> PutObjectAsync(
             string bucketName,
@@ -158,13 +169,20 @@ namespace AWSWrapper.S3
             if (inputStream.Length > MaxSinglePartSize)
                 throw new ArgumentException($"Part size in singlepart upload can't exceed {MaxSinglePartSize} B, but was {inputStream.Length} B, bucket: {bucketName}, key: {key}.");
 
-            var request = new PutObjectRequest()
-            {
-                BucketName = bucketName,
-                Key = key,
-                InputStream = inputStream,
-                ServerSideEncryptionKeyManagementServiceKeyId = keyId,
-            };
+            var request = keyId == null ?
+                new PutObjectRequest()
+                {
+                    BucketName = bucketName,
+                    Key = key,
+                    InputStream = inputStream
+                } : new PutObjectRequest()
+                {
+                    BucketName = bucketName,
+                    Key = key,
+                    InputStream = inputStream,
+                    ServerSideEncryptionKeyManagementServiceKeyId = keyId,
+                    ServerSideEncryptionMethod = ServerSideEncryptionMethod.AWSKMS
+                };
 
             if (progress != null)
                 request.StreamTransferProgress += new EventHandler<StreamTransferProgressArgs>(progress);
@@ -226,7 +244,7 @@ namespace AWSWrapper.S3
                 Marker = response?.NextMarker,
                 BucketName = bucketName,
                 Prefix = prefix,
-                MaxKeys = 100000,
+                MaxKeys = 100000
             }, cancellationToken).EnsureSuccessAsync()) != null)
             {
                 if (!response.S3Objects.IsNullOrEmpty())
