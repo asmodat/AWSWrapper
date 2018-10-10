@@ -19,7 +19,7 @@ namespace AWSWrapper.IAM
             return list.Single(x => x.AccessKeyId.Equals(name, stringComparison));
         }
 
-        public static async Task<ManagedPolicy> CreatePolicyS3Async(this IAMHelper iam, IEnumerable<string> paths, string name, IEnumerable<S3Helper.Permissions> permissions, string description = null, CancellationToken cancellationToken = default(CancellationToken))
+        /*public static async Task<ManagedPolicy> CreatePolicyS3Async(this IAMHelper iam, IEnumerable<string> paths, string name, IEnumerable<S3Helper.Permissions> permissions, string description = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (permissions == null)
                 throw new ArgumentNullException($"{nameof(permissions)} can't be null");
@@ -45,6 +45,62 @@ $@"
             //this must be present otherwise its not possible to delete objects from the buckt due to some AWS bug
             sub_policies += $"{{ \"Sid\": \"AWSHelper{paths.Count()}\", \"Effect\": \"Allow\", \"Action\": [ \"s3:List*\" ], \"Resource\": \"arn:aws:s3:::*\" }}";
             //sub_policies = sub_policies.TrimEnd(',');
+
+            string json =
+$@"{{
+    ""Version"": ""2012-10-17"",
+    ""Statement"": [{sub_policies}
+    ]
+}}";
+            return (await iam.CreatePolicyAsync(name: name, description: description, json: json, cancellationToken: cancellationToken)).Policy;
+        }*/
+
+        public static async Task<ManagedPolicy> CreatePolicyS3Async(this IAMHelper iam, IEnumerable<string> paths, string name, IEnumerable<S3Helper.Permissions> permissions, string description = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if (permissions == null)
+                throw new ArgumentNullException($"{nameof(permissions)} can't be null");
+
+            var actions = permissions.Any(p => p == S3Helper.Permissions.All) ?
+                "\"s3:*\"" : permissions.SelectMany(
+                p => p.ToStringFlagArray().Select(s => $"s3:{s}"))
+                .Distinct().JsonSerialize();
+
+            var sidCntr = 0;
+            var buckets = paths.Select(path => path.SplitByFirst('/').First()).Distinct();
+            var sub_policies = $"{{\"Sid\": \"AWSHelper{++sidCntr}\", \"Effect\": \"Allow\", \"Action\": [ \"s3:ListAllMyBuckets\",  \"s3:GetBucketLocation\" ],\"Resource\": \"arn:aws:s3:::*\"}},";
+
+            foreach (var bucket in buckets)
+            {
+                var resourcePathPrefixArray = paths.IsNullOrEmpty() ? "[ ]" : paths
+                    .Where(path => path.StartsWith(bucket))
+                    .Select(path => path.TrimStartSingle(bucket).TrimStart("/"))
+                    .Distinct().ToArray().JsonSerialize(Newtonsoft.Json.Formatting.None);
+
+                sub_policies +=
+$@"
+        {{
+            ""Sid"": ""AWSHelper{++sidCntr}"",
+            ""Effect"": ""Allow"",
+            ""Action"": [ ""s3:List*"" ],
+            ""Resource"": ""arn:aws:s3:::{bucket}"",
+            ""Condition"": {{ ""StringLike"": {{ ""s3:prefix"": {resourcePathPrefixArray} }} }}
+        }},";
+
+            }
+
+            foreach (var path in paths)
+            {
+                sub_policies +=
+$@"
+        {{
+            ""Sid"": ""AWSHelper{++sidCntr}"",
+            ""Effect"": ""Allow"",
+            ""Action"": {(actions.IsNullOrEmpty() ? "[ ]" : actions)},
+            ""Resource"": ""arn:aws:s3:::{path}""
+        }},";
+            };
+
+            sub_policies = sub_policies.TrimEnd(",");
 
             string json =
 $@"{{
