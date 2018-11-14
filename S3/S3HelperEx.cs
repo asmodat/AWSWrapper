@@ -163,8 +163,12 @@ namespace AWSWrapper.S3
             string key,
             string version = null,
             string eTag = null,
+            bool throwIfNotFound = true,
             CancellationToken cancellationToken = default(CancellationToken))
         {
+            if (!throwIfNotFound && !await s3.ObjectExistsAsync(bucketName: bucketName, key: key))
+                return null;
+
             var obj = await s3.GetObjectAsync(
                 bucketName: bucketName,
                 key: key,
@@ -180,6 +184,7 @@ namespace AWSWrapper.S3
             string key,
             string version = null,
             string eTag = null,
+            bool throwIfNotFound = true,
             Encoding encoding = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -188,7 +193,11 @@ namespace AWSWrapper.S3
                 key: key,
                 version: version,
                 eTag: eTag,
+                throwIfNotFound: throwIfNotFound,
                 cancellationToken: cancellationToken);
+
+            if (!throwIfNotFound && stream == null)
+                return default(T);
 
             return await stream
                 .ToStringAsync(encoding ?? Encoding.UTF8)
