@@ -77,7 +77,6 @@ namespace AWSWrapper.EC2
                 NextToken = response?.NextToken,
                 Filters = filterList,
                 InstanceIds = instanceIds
-
             }, cancellationToken).EnsureSuccessAsync()) != null)
             {
                 if (!response.Reservations.IsNullOrEmpty())
