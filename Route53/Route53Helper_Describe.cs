@@ -3,6 +3,8 @@ using System.Threading.Tasks;
 using AWSWrapper.Extensions;
 using System.Threading;
 using AsmodatStandard.Extensions.Collections;
+using Amazon.Route53;
+using AsmodatStandard.Extensions;
 
 namespace AWSWrapper.Route53
 {
@@ -36,16 +38,35 @@ namespace AWSWrapper.Route53
         {
             var list = new List<Amazon.Route53.Model.ResourceRecordSet>();
             Amazon.Route53.Model.ListResourceRecordSetsResponse response = null;
-            while ((response = await _client.ListResourceRecordSetsAsync(
-                new Amazon.Route53.Model.ListResourceRecordSetsRequest()
-                {
-                    StartRecordIdentifier = response?.NextRecordIdentifier,
-                    StartRecordName = response?.NextRecordName,
-                    StartRecordType = response?.NextRecordType,
-                    HostedZoneId = zoneId,
-                    MaxItems = "1000",
-                }, cancellationToken))?.HttpStatusCode == System.Net.HttpStatusCode.OK)
+            bool rateLimitExceeded = false;
+            int rateLimit = 5000;
+            do
             {
+                try
+                {
+                    rateLimitExceeded = false;
+                     response = await _client.ListResourceRecordSetsAsync(
+                         new Amazon.Route53.Model.ListResourceRecordSetsRequest() {
+                        StartRecordIdentifier = response?.NextRecordIdentifier,
+                        StartRecordName = response?.NextRecordName,
+                        StartRecordType = response?.NextRecordType,
+                        HostedZoneId = zoneId,
+                        MaxItems = "1000",
+                    }, cancellationToken);
+                }
+                catch(AmazonRoute53Exception ex)
+                {
+                    if (!(ex.Message ?? "").ToLower().Contains("rate exceeded"))
+                        throw;
+                    else
+                    {
+                        rateLimitExceeded = true;
+                        await Task.Delay(rateLimit);
+                        rateLimit += rateLimit + RandomEx.Next(1,500);
+                        continue;
+                    }
+                }
+
                 if (!response.ResourceRecordSets.IsNullOrEmpty())
                     list.AddRange(response.ResourceRecordSets);
 
@@ -53,11 +74,12 @@ namespace AWSWrapper.Route53
                     break;
 
                 await Task.Delay(100);
-            }
+
+
+            } while (rateLimitExceeded || response?.HttpStatusCode == System.Net.HttpStatusCode.OK);
 
             response.EnsureSuccess();
             return list;
         }
-
     }
 }
