@@ -107,5 +107,25 @@ namespace AWSWrapper.ECS
             => arns.ForEachAsync(arn => _client.StopTaskAsync(
                     new StopTaskRequest() { Task = arn, Cluster = cluster }, cancellationToken),
                     _maxDegreeOfParalelism).EnsureSuccess();
+
+        public async Task<DescribeTasksResponse> DescribeTasksAsync(string cluster, IEnumerable<string> names, bool throwIfNotFound = true, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            DescribeTasksResponse result;
+            try
+            {
+                result = await _client.DescribeTasksAsync(new DescribeTasksRequest() {
+                    Tasks = names.ToList(),
+                    Cluster = cluster}, cancellationToken);
+            }
+            catch (ClusterNotFoundException)
+            {
+                if (throwIfNotFound)
+                    throw;
+
+                return null;
+            }
+
+            return result.EnsureSuccess();
+        }
     }
 }

@@ -6,6 +6,7 @@ using Amazon.ElasticLoadBalancingV2;
 using System.Threading;
 using Amazon.ElasticLoadBalancingV2.Model;
 using AWSWrapper.Extensions;
+using AsmodatStandard.Extensions.Collections;
 
 namespace AWSWrapper.ELB
 {
@@ -88,6 +89,92 @@ namespace AWSWrapper.ELB
             CancellationToken cancellationToken = default(CancellationToken))
             => (await elbh.DescribeTargetGroupsAsync(loadBalancerArn, names, targetGroupArns, cancellationToken)).Select(x => x.TargetGroupArn);
 
+        /*public static async Task<TargetGroup> GetTargetGroupByNameAsync(
+            this ELBHelper elbh,
+            string loadBalancerName,
+            string targetGroupName, 
+            bool throwIfNotFound)
+        {
+            var albs = await elbh.GetLoadBalancersByName(loadBalancerName, throwIfNotFound: throwIfNotFound);
+            var albsCount = (albs?.Count() ?? 0);
+
+            if (albsCount > 1)
+                throw new Exception($"Found more then one Loadbalancer with name '{loadBalancerName}'.");
+            else if(albsCount <= 0)
+            {
+                if (throwIfNotFound)
+                    throw new Exception($"Loadbalancer with name '{loadBalancerName}' was not found.");
+                else
+                    return null;
+            }
+
+            var alb = albs.Single();
+            IEnumerable<TargetGroup> tgs;
+
+            if (!throwIfNotFound)
+            {
+                try
+                {
+                    tgs = await elbh.DescribeTargetGroupsAsync(alb.LoadBalancerArn, names: new List<string>() { targetGroupName });
+                }
+                catch (TargetGroupNotFoundException ex)
+                {
+                    return null;
+                }
+            }
+            else
+                tgs = await elbh.DescribeTargetGroupsAsync(alb.LoadBalancerArn, names: new List<string>() { targetGroupName });
+
+            var tgsCount = (tgs?.Count() ?? 0);
+
+            if (tgsCount > 1)
+                throw new Exception($"Found more then one Target Group with name '{targetGroupName}'.");
+            else if (tgsCount <= 0)
+            {
+                if (throwIfNotFound)
+                    throw new Exception($"Target Group with name '{targetGroupName}' was not found.");
+                else
+                    return null;
+            }
+
+            return tgs.Single();
+        }*/
+
+        public static async Task<TargetGroup> GetTargetGroupByNameAsync(
+            this ELBHelper elbh,
+            string targetGroupName,
+            bool throwIfNotFound)
+        {
+            IEnumerable<TargetGroup> tgs;
+            if (!throwIfNotFound)
+            {
+                try
+                {
+                    tgs = await elbh.DescribeTargetGroupsAsync(loadBalancerArn: null, names: new List<string>() { targetGroupName });
+                }
+                catch (TargetGroupNotFoundException ex)
+                {
+                    return null;
+                }
+            }
+            else
+                tgs = await elbh.DescribeTargetGroupsAsync(loadBalancerArn: null, names: new List<string>() { targetGroupName });
+
+            var tgsCount = (tgs?.Count() ?? 0);
+
+            if (tgsCount > 1)
+                throw new Exception($"Found more then one Target Group with name '{targetGroupName}'.");
+            else if (tgsCount <= 0)
+            {
+                if (throwIfNotFound)
+                    throw new Exception($"Target Group with name '{targetGroupName}' was not found.");
+                else
+                    return null;
+            }
+
+            return tgs.Single();
+        }
+
         public static async Task DestroyLoadBalancer(this ELBHelper elbh, string loadBalancerName, bool throwIfNotFound, CancellationToken cancellationToken = default(CancellationToken))
         {
             var loadbalancers = await elbh.GetLoadBalancersByName(loadBalancerName, throwIfNotFound, cancellationToken);
@@ -154,6 +241,16 @@ namespace AWSWrapper.ELB
                 return null;
 
             return await elbh.DescribeTargetGroupsAsync(loadBalancerArn: loadbalancer.LoadBalancerArn, cancellationToken: cancellationToken);
+        }
+
+        public static async Task AttachInstanceToTargetGroupAsync(
+            this ELBHelper elbh,
+            TargetGroup tg,
+            string inst)
+        {
+
+            //elb
+            
         }
     }
 }

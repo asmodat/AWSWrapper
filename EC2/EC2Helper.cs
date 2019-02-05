@@ -56,7 +56,10 @@ namespace AWSWrapper.EC2
             T3Medium,
             T3Large,
             T3XLarge,
-            T32XLarge
+            T32XLarge,
+            C5Large,
+            C5XLarge,
+            C52XLarge
         }
 
         public EC2Helper(int maxDegreeOfParalelism = 2)

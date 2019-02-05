@@ -32,6 +32,9 @@ namespace AWSWrapper.EC2
                 case InstanceModel.T3Large: return InstanceType.T3Large;
                 case InstanceModel.T3XLarge: return InstanceType.T3Xlarge;
                 case InstanceModel.T32XLarge: return InstanceType.T32xlarge;
+                case InstanceModel.C5Large: return InstanceType.C5Large;
+                case InstanceModel.C5XLarge: return InstanceType.C5Xlarge;
+                case InstanceModel.C52XLarge: return InstanceType.C52xlarge;
                 default: throw new Exception($"Unrecognized instance model: {model.ToString()}");
             }
         }
@@ -112,7 +115,7 @@ namespace AWSWrapper.EC2
         public static async Task<Instance[]> ListInstancesByName(this EC2Helper ec2, string name, CancellationToken cancellationToken = default(CancellationToken))
         {
             var batch = await ec2.DescribeInstancesAsync(instanceIds: null, filters: null, cancellationToken: cancellationToken);
-            return batch.SelectMany(x => x.Instances).Where(x => (x?.Tags?.Any(t => t?.Key?.ToLower() == "name" && t.Value == name) ?? false) == true).ToArray();
+            return batch.SelectMany(x => x.Instances).Where(x => (x?.Tags?.Any(t => t?.Key?.ToLower() == "name" && t.Value == name) ?? false) == true || (x != null && x.InstanceId == name)).ToArray();
         }
 
         public static async Task<InstanceStateChange> StopInstance(this EC2Helper ec2,string instanceId, bool force = false, CancellationToken cancellationToken = default(CancellationToken))

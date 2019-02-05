@@ -120,5 +120,37 @@ namespace AWSWrapper.ELB
                     _maxDegreeOfParalelism,
                     cancellationToken
             ).EnsureSuccess();
+
+        public Task<DeregisterTargetsResponse> DeregisterTargetAsync(
+            TargetGroup targetGroup,
+            Amazon.EC2.Model.Instance instance,
+            CancellationToken cancellationToken = default(CancellationToken))
+                => _clientV2.DeregisterTargetsAsync(
+                new DeregisterTargetsRequest()
+                {
+                    TargetGroupArn = targetGroup.TargetGroupArn,
+                    Targets = new List<TargetDescription>() {
+                          new TargetDescription() {
+                              Id = instance.InstanceId
+                          }
+                      }
+                }, cancellationToken: cancellationToken).EnsureSuccessAsync();
+
+        public Task<RegisterTargetsResponse> RegisterTargetAsync(
+            TargetGroup targetGroup,
+            Amazon.EC2.Model.Instance instance,
+            int port,
+            CancellationToken cancellationToken = default(CancellationToken))
+                => _clientV2.RegisterTargetsAsync(
+                new RegisterTargetsRequest()
+                {
+                    TargetGroupArn = targetGroup.TargetGroupArn,
+                    Targets = new List<TargetDescription>() {
+                          new TargetDescription() {
+                              Id = instance.InstanceId,
+                              Port = port
+                          }
+                      }
+                }, cancellationToken: cancellationToken).EnsureSuccessAsync();
     }
 }
