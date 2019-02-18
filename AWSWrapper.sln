@@ -5,7 +5,7 @@ VisualStudioVersion = 15.0.27130.2027
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AWSWrapper", "AWSWrapper.csproj", "{1F6CDDE8-7081-45E6-833A-AD63716AD77E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Asmodat Standard", "Asmodat-Standard\Asmodat Standard\Asmodat Standard.csproj", "{ED72DF2E-9425-419B-A12F-4A65EE05E288}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Asmodat Standard", "..\Asmodat-Standard\Asmodat Standard\Asmodat Standard.csproj", "{7AF4BAAE-A580-4072-8AF8-D92BFDB6578C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,14 +23,14 @@ Global
 		{1F6CDDE8-7081-45E6-833A-AD63716AD77E}.Release|Any CPU.Build.0 = Release|Any CPU
 		{1F6CDDE8-7081-45E6-833A-AD63716AD77E}.Release|x64.ActiveCfg = Release|Any CPU
 		{1F6CDDE8-7081-45E6-833A-AD63716AD77E}.Release|x64.Build.0 = Release|Any CPU
-		{ED72DF2E-9425-419B-A12F-4A65EE05E288}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{ED72DF2E-9425-419B-A12F-4A65EE05E288}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{ED72DF2E-9425-419B-A12F-4A65EE05E288}.Debug|x64.ActiveCfg = Debug|x64
-		{ED72DF2E-9425-419B-A12F-4A65EE05E288}.Debug|x64.Build.0 = Debug|x64
-		{ED72DF2E-9425-419B-A12F-4A65EE05E288}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{ED72DF2E-9425-419B-A12F-4A65EE05E288}.Release|Any CPU.Build.0 = Release|Any CPU
-		{ED72DF2E-9425-419B-A12F-4A65EE05E288}.Release|x64.ActiveCfg = Release|x64
-		{ED72DF2E-9425-419B-A12F-4A65EE05E288}.Release|x64.Build.0 = Release|x64
+		{7AF4BAAE-A580-4072-8AF8-D92BFDB6578C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7AF4BAAE-A580-4072-8AF8-D92BFDB6578C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7AF4BAAE-A580-4072-8AF8-D92BFDB6578C}.Debug|x64.ActiveCfg = Debug|x64
+		{7AF4BAAE-A580-4072-8AF8-D92BFDB6578C}.Debug|x64.Build.0 = Debug|x64
+		{7AF4BAAE-A580-4072-8AF8-D92BFDB6578C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7AF4BAAE-A580-4072-8AF8-D92BFDB6578C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7AF4BAAE-A580-4072-8AF8-D92BFDB6578C}.Release|x64.ActiveCfg = Release|x64
+		{7AF4BAAE-A580-4072-8AF8-D92BFDB6578C}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
