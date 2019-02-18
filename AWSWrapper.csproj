@@ -29,26 +29,26 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.AutoScaling" Version="3.3.8.16" />
-    <PackageReference Include="AWSSDK.AutoScalingPlans" Version="3.3.2.14" />
-    <PackageReference Include="AWSSDK.CertificateManager" Version="3.3.5.48" />
-    <PackageReference Include="AWSSDK.CloudFormation" Version="3.3.13.14" />
-    <PackageReference Include="AWSSDK.CloudWatch" Version="3.3.10.14" />
-    <PackageReference Include="AWSSDK.CloudWatchLogs" Version="3.3.7.14" />
-    <PackageReference Include="AWSSDK.Core" Version="3.3.31.5" />
-    <PackageReference Include="AWSSDK.KeyManagementService" Version="3.3.7.14" />
-    <PackageReference Include="AWSSDK.S3" Version="3.3.31.13" />
-    <PackageReference Include="AWSSDK.EC2" Version="3.3.80.2" />
-    <PackageReference Include="AWSSDK.ECR" Version="3.3.5" />
-    <PackageReference Include="AWSSDK.ECS" Version="3.3.21.15" />
-    <PackageReference Include="AWSSDK.ElasticLoadBalancing" Version="3.3.3.35" />
-    <PackageReference Include="AWSSDK.ElasticLoadBalancingV2" Version="3.3.13" />
-    <PackageReference Include="AWSSDK.IdentityManagement" Version="3.3.9.13" />
-    <PackageReference Include="AWSSDK.ResourceGroups" Version="3.3.3.16" />
-    <PackageReference Include="AWSSDK.Route53" Version="3.3.18.12" />
-    <PackageReference Include="AWSSDK.SecurityToken" Version="3.3.4.48" />
-    <PackageReference Include="AWSSDK.SimpleEmail" Version="3.3.7.28" />
-    <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.3.3.16" />
+    <PackageReference Include="AWSSDK.AutoScaling" Version="3.3.8.18" />
+    <PackageReference Include="AWSSDK.AutoScalingPlans" Version="3.3.2.16" />
+    <PackageReference Include="AWSSDK.CertificateManager" Version="3.3.5.50" />
+    <PackageReference Include="AWSSDK.CloudFormation" Version="3.3.13.16" />
+    <PackageReference Include="AWSSDK.CloudWatch" Version="3.3.10.16" />
+    <PackageReference Include="AWSSDK.CloudWatchLogs" Version="3.3.7.16" />
+    <PackageReference Include="AWSSDK.Core" Version="3.3.31.7" />
+    <PackageReference Include="AWSSDK.KeyManagementService" Version="3.3.7.16" />
+    <PackageReference Include="AWSSDK.S3" Version="3.3.31.15" />
+    <PackageReference Include="AWSSDK.EC2" Version="3.3.82" />
+    <PackageReference Include="AWSSDK.ECR" Version="3.3.5.2" />
+    <PackageReference Include="AWSSDK.ECS" Version="3.3.23" />
+    <PackageReference Include="AWSSDK.ElasticLoadBalancing" Version="3.3.3.37" />
+    <PackageReference Include="AWSSDK.ElasticLoadBalancingV2" Version="3.3.13.2" />
+    <PackageReference Include="AWSSDK.IdentityManagement" Version="3.3.9.15" />
+    <PackageReference Include="AWSSDK.ResourceGroups" Version="3.3.3.18" />
+    <PackageReference Include="AWSSDK.Route53" Version="3.3.18.14" />
+    <PackageReference Include="AWSSDK.SecurityToken" Version="3.3.4.50" />
+    <PackageReference Include="AWSSDK.SimpleEmail" Version="3.3.7.30" />
+    <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.3.3.18" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
   </ItemGroup>
 

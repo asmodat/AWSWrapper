@@ -112,10 +112,21 @@ namespace AWSWrapper.EC2
             return batch.SelectMany(x => x.Instances).Where(x => (x?.Tags?.Any(t => t?.Key == tagKey) ?? false) == true).ToArray();
         }
 
-        public static async Task<Instance[]> ListInstancesByName(this EC2Helper ec2, string name, CancellationToken cancellationToken = default(CancellationToken))
+        public static async Task<Instance[]> ListInstancesByName(
+            this EC2Helper ec2, 
+            string name, 
+            IEnumerable<InstanceStateName> stateExclude = null,
+            CancellationToken cancellationToken = default(CancellationToken))
         {
             var batch = await ec2.DescribeInstancesAsync(instanceIds: null, filters: null, cancellationToken: cancellationToken);
-            return batch.SelectMany(x => x.Instances).Where(x => (x?.Tags?.Any(t => t?.Key?.ToLower() == "name" && t.Value == name) ?? false) == true || (x != null && x.InstanceId == name)).ToArray();
+            var instances = batch.SelectMany(x => x.Instances).Where(x => x != null);
+
+            if (!stateExclude.IsNullOrEmpty())
+                instances = instances.Where(x => x != null && !stateExclude.Contains(x.State.Name));
+            
+            return instances.Where(x => 
+                (x.Tags?.Any(t => t?.Key?.ToLower() == "name" && t.Value == name) ?? false) == true || 
+                x.InstanceId == name).ToArray();
         }
 
         public static async Task<InstanceStateChange> StopInstance(this EC2Helper ec2,string instanceId, bool force = false, CancellationToken cancellationToken = default(CancellationToken))
