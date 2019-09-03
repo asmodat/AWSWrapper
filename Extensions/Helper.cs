@@ -9,6 +9,7 @@ using AsmodatStandard.Threading;
 using AsmodatStandard.Extensions.Collections;
 using Amazon.Runtime;
 using System.Text.RegularExpressions;
+using Amazon.Runtime.CredentialManagement;
 
 namespace AWSWrapper.Extensions
 {
@@ -43,6 +44,21 @@ namespace AWSWrapper.Extensions
                 return result.SplitByFirst('/')[1];
 
             return result;
+        }
+
+        public static StoredProfileAWSCredentials GetCredentials(string profileName)
+            => new StoredProfileAWSCredentials(profileName);
+
+        public static AWSCredentials GetAWSCredentials(string profileName)
+        {
+            var sharedFile = new SharedCredentialsFile();
+            sharedFile.TryGetProfile(profileName, out var profile);
+
+            if (profileName == null)
+                throw new Exception($"Could not find profile with name: '{profileName ?? "undefined"}'");
+
+            AWSCredentialsFactory.TryGetAWSCredentials(profile, sharedFile, out var credentials);
+            return credentials;
         }
     }
 }

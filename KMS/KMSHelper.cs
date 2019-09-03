@@ -7,6 +7,7 @@ using AWSWrapper.Extensions;
 using AsmodatStandard.Extensions;
 using AsmodatStandard.Extensions.Collections;
 using Amazon.SecurityToken.Model;
+using Amazon.Runtime;
 
 namespace AWSWrapper.KMS
 {
@@ -26,21 +27,18 @@ namespace AWSWrapper.KMS
 
         internal readonly int _maxDegreeOfParalelism;
         internal readonly AmazonKeyManagementServiceClient _client;
-        internal readonly Credentials _credentials = null;
+        internal readonly AWSCredentials _credentials;
 
-        public KMSHelper(Credentials credentials, int maxDegreeOfParalelism = 2)
+        public KMSHelper(AWSCredentials credentials = null, int maxDegreeOfParalelism = 2)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
             _credentials = credentials;
 
             if (credentials != null)
-            {
                 _client = new AmazonKeyManagementServiceClient(credentials);
-            }
             else
-            {
                 _client = new AmazonKeyManagementServiceClient();
-            }
+            
         }
 
         public Task<CreateGrantResponse> CreateGrantAsync(

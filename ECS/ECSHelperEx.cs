@@ -79,7 +79,7 @@ namespace AWSWrapper.ECS
             IEnumerable<int> ports,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            var env = envVariables?.Select(x => new KeyValuePair() { Name = x.Key, Value = x.Value })?.ToList();
+            var env = envVariables?.Select(x => new Amazon.ECS.Model.KeyValuePair() { Name = x.Key, Value = x.Value })?.ToList();
             var lc = new LogConfiguration()
             {
                 LogDriver = new LogDriver("awslogs"),

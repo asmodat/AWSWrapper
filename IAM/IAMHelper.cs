@@ -9,6 +9,7 @@ using AWSWrapper.Extensions;
 using AsmodatStandard.Extensions;
 using AsmodatStandard.Extensions.Collections;
 using Amazon.SecurityToken.Model;
+using Amazon.Runtime;
 
 namespace AWSWrapper.IAM
 {
@@ -16,10 +17,12 @@ namespace AWSWrapper.IAM
     {
         internal readonly int _maxDegreeOfParalelism;
         internal readonly AmazonIdentityManagementServiceClient _IAMClient;
+        internal readonly AWSCredentials _credentials;
 
-        public IAMHelper(Credentials credentials, int maxDegreeOfParalelism = 2)
+        public IAMHelper(AWSCredentials credentials, int maxDegreeOfParalelism = 2)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
+            _credentials = credentials;
 
             if (credentials != null)
                 _IAMClient = new AmazonIdentityManagementServiceClient(credentials);

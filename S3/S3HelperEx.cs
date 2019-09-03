@@ -11,11 +11,28 @@ using AsmodatStandard.Extensions.Collections;
 using AsmodatStandard.Threading;
 using System.Linq;
 using System;
+using AsmodatStandard.Extensions.Threading;
+using System.Security.Cryptography;
 
 namespace AWSWrapper.S3
 {
     public static class S3HelperEx
     {
+        public static (string bucket, string key) ToBucketKeyPair(this string path)
+        {
+            path = path?.Trim().TrimStartMany("/", "\\");
+
+            if (path.IsNullOrEmpty())
+                throw new ArgumentNullException($"Splitting bucket and key failed, path can't be null or empty, but was '{path}'");
+
+            if (!path.Contains('/'))
+                return (path, null);
+            
+            var bucket = path.SplitByFirst('/').FirstOrDefault();
+            var key = path.TrimStartSingle(bucket).Trim("/");
+            return (bucket, key);
+        }
+
         public static async Task CreateDirectory(this S3Helper s3,
             string bucketName,
             string path,
@@ -217,6 +234,20 @@ namespace AWSWrapper.S3
                 contentType: "plain/text",
                 cancellationToken: cancellationToken);
 
+        public static Task<string> UploadJsonAsync<T>(this S3Helper s3,
+            string bucketName,
+            string key,
+            T content,
+            Newtonsoft.Json.Formatting formatting = Newtonsoft.Json.Formatting.Indented,
+            string keyId = null,
+            Encoding encoding = null,
+            CancellationToken cancellationToken = default(CancellationToken))
+                => s3.UploadStreamAsync(bucketName: bucketName,
+                key: key,
+                inputStream: content.JsonSerialize(formatting).ToMemoryStream(encoding),
+                contentType: "plain/text",
+                cancellationToken: cancellationToken);
+
         public static async Task<string> UploadStreamAsync(this S3Helper s3,
         string bucketName,
         string key,
@@ -224,10 +255,21 @@ namespace AWSWrapper.S3
         string keyId = null,
         string contentType = "application/octet-stream",
         bool throwIfAlreadyExists = false,
+        int msTimeout = int.MaxValue,
         CancellationToken cancellationToken = default(CancellationToken))
         {
+            CancellationToken ct;
+            void UpdateCancellationToken() {
+                if (cancellationToken != null)
+                    ct = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken).Token;
+                else
+                    ct = new CancellationTokenSource().Token;
+            }
+            UpdateCancellationToken();
+
             if (throwIfAlreadyExists &&
-                await s3.ObjectExistsAsync(bucketName: bucketName, key: key))
+                await s3.ObjectExistsAsync(bucketName: bucketName, key: key, cancellationToken: ct)
+                .TryCancelAfter(ct, msTimeout: msTimeout))
                 throw new Exception($"Object {key} in bucket {bucketName} already exists.");
 
             if (keyId == "")
@@ -235,50 +277,81 @@ namespace AWSWrapper.S3
             
             if(keyId != null && !keyId.IsGuid())
             {
-                var alias = await (new KMSHelper(s3._credentials)).GetKeyAliasByNameAsync(name: keyId, cancellationToken: cancellationToken);
+                UpdateCancellationToken();
+                var alias = await (new KMSHelper(s3._credentials)).GetKeyAliasByNameAsync(name: keyId, cancellationToken: ct)
+                    .TryCancelAfter(ct, msTimeout: msTimeout);
                 keyId = alias.TargetKeyId;
             }
 
             var bufferSize = 128 * 1024;
             var blob = inputStream.ToMemoryBlob(maxLength: s3.MaxSinglePartSize, bufferSize: bufferSize);
+            var ih = IncrementalHash.CreateHash(HashAlgorithmName.MD5);
+            string md5, etag;
 
             if (blob.Length < s3.MaxSinglePartSize)
             {
-                var spResult = await s3.PutObjectAsync(bucketName: bucketName, key: key, inputStream: blob, keyId: keyId, cancellationToken: cancellationToken);
-                return spResult.ETag.Trim('"');
+                UpdateCancellationToken();
+                using (var ms = blob.CopyToMemoryStream(bufferSize: (int)blob.Length))
+                {
+                    var spResult = s3.PutObjectAsync(bucketName: bucketName, key: key, inputStream: ms, keyId: keyId, cancellationToken: ct)
+                        .TryCancelAfter(ct, msTimeout: msTimeout);
+
+                    blob.Seek(0, SeekOrigin.Begin);
+                    ih.AppendData(blob.ToArray());
+
+                    md5 = ih.GetHashAndReset().ToHexString();
+                    etag = (await spResult).ETag.Trim('"');
+                    return md5;
+                }
             }
-            
-            var init = await s3.InitiateMultipartUploadAsync(bucketName, key, contentType, keyId: keyId, cancellationToken: cancellationToken);
+
+            UpdateCancellationToken();
+            var init = await s3.InitiateMultipartUploadAsync(bucketName, key, contentType, keyId: keyId, cancellationToken: ct)
+                .TryCancelAfter(ct, msTimeout: msTimeout);
             var partNumber = 0;
             var tags = new List<PartETag>();
             while (blob.Length > 0)
             {
                 partNumber = ++partNumber;
+                UpdateCancellationToken();
 
-                var tUpload = s3.UploadPartAsync(
-                    bucketName: bucketName,
-                    key: key,
-                    uploadId: init.UploadId,
-                    partNumber: partNumber,
-                    partSize: (int)blob.Length,
-                    inputStream: blob.CopyToMemoryStream(bufferSize: (int)blob.Length), //copy so new part can be read at the same time
-                    progress: null,
-                    cancellationToken: cancellationToken);
+                //copy so new part can be read at the same time
+                using (var ms = blob.CopyToMemoryStream(bufferSize: (int)blob.Length))
+                {
+                    var tUpload = s3.UploadPartAsync(
+                        bucketName: bucketName,
+                        key: key,
+                        uploadId: init.UploadId,
+                        partNumber: partNumber,
+                        partSize: (int)ms.Length,
+                        inputStream: ms,
+                        progress: null,
+                        cancellationToken: ct).TryCancelAfter(ct, msTimeout: msTimeout);
 
-                if (blob.Length <= s3.DefaultPartSize) //read next part from input before stream gets uploaded
-                    blob = inputStream.ToMemoryBlob(maxLength: s3.DefaultPartSize, bufferSize: bufferSize);
+                    if (ct.IsCancellationRequested)
+                        throw new OperationCanceledException("Operation was cancelled or timed out.");
 
-                tags.Add(new PartETag(partNumber, (await tUpload).ETag));
+                    if (blob.Length <= s3.DefaultPartSize) //read next part from input before stream gets uploaded
+                        blob = inputStream.ToMemoryBlob(maxLength: s3.DefaultPartSize, bufferSize: bufferSize);
+
+                    tags.Add(new PartETag(partNumber, (await tUpload).ETag));
+
+                    ms.Seek(0, SeekOrigin.Begin);
+                    ih.AppendData(ms.ToArray());
+                }
             }
 
+            UpdateCancellationToken();
             var mpResult = await s3.CompleteMultipartUploadAsync(
                 bucketName: bucketName,
                 key: key,
                 uploadId: init.UploadId,
                 partETags: tags,
-                cancellationToken: cancellationToken);
+                cancellationToken: ct).TryCancelAfter(ct, msTimeout: msTimeout);
 
-            return mpResult.ETag.Trim('"');
+            md5 = ih.GetHashAndReset().ToHexString();
+            etag = mpResult.ETag.Trim('"');
+            return md5;
         }
 
         public static async Task<DeleteObjectsResponse> DeleteObjectsModifiedBeforeDateAsync(this S3Helper s3,

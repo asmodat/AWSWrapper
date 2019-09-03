@@ -8,6 +8,9 @@ using Amazon.CertificateManager.Model;
 using AWSWrapper.Extensions;
 using AsmodatStandard.Extensions;
 using AsmodatStandard.Extensions.Collections;
+using Amazon.Runtime;
+using Amazon.SecurityToken;
+using Amazon.SecurityToken.Model;
 
 namespace AWSWrapper.ACM
 {

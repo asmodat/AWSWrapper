@@ -11,6 +11,8 @@ using AsmodatStandard.Extensions.Collections;
 using System.IO;
 using Amazon.Runtime;
 using Amazon.SecurityToken.Model;
+using Amazon;
+using AsmodatStandard.Extensions.Threading;
 
 namespace AWSWrapper.S3
 {
@@ -49,17 +51,32 @@ namespace AWSWrapper.S3
         public readonly int DefaultPartSize = 5 * 1024 * 1025;
         internal readonly int _maxDegreeOfParalelism;
         internal readonly AmazonS3Client _S3Client;
-        internal readonly Credentials _credentials;
+        internal readonly AWSCredentials _credentials;
+        private readonly static object _locker = new object();
 
-        public S3Helper(Credentials credentials = null, int maxDegreeOfParalelism = 2)
+        public S3Helper(AWSCredentials credentials = null, RegionEndpoint region = null, int maxDegreeOfParalelism = 2)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
             _credentials = credentials;
 
             if (credentials != null)
-                _S3Client = new AmazonS3Client(credentials);
+            {
+                _S3Client = region == null ? 
+                    new AmazonS3Client(credentials) : new 
+                    AmazonS3Client(credentials, region);
+            }
             else
-                _S3Client = new AmazonS3Client();
+            {
+                _S3Client = region == null ? 
+                    new AmazonS3Client() : 
+                    new AmazonS3Client(region);
+            }
+        }
+
+        public S3Helper(string awsAccessKeyId, string awsSecretAccessKey, int maxDegreeOfParalelism = 2)
+        {
+            _maxDegreeOfParalelism = maxDegreeOfParalelism;
+            _S3Client = new AmazonS3Client(awsAccessKeyId, awsSecretAccessKey);
         }
 
         public Task<GetObjectMetadataResponse> GetObjectMetadata(
@@ -100,6 +117,34 @@ namespace AWSWrapper.S3
             else
                 return true;
         }
+
+        public async Task<bool> DeleteDirectoryAsync(
+            string bucketName,
+            string prefix = null,
+            string versionId = null,
+            bool throwOnFailure = true,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var list = await this.ListObjectsAsync(bucketName, prefix, cancellationToken: cancellationToken);
+
+            bool success = true;
+            await ParallelEx.ForEachAsync(list, async obj =>
+            {
+                var result = await this.DeleteObjectAsync(
+                    bucketName: bucketName, 
+                    key: obj.Key, 
+                    throwOnFailure: throwOnFailure, 
+                    cancellationToken: cancellationToken);
+
+                lock(_locker)
+                    success = success && result;
+
+            }, maxDegreeOfParallelism: _maxDegreeOfParalelism);
+
+            return success;
+        }
+
+        
 
         public Task<GetObjectResponse> GetObjectAsync(
             string bucketName,
@@ -235,7 +280,11 @@ namespace AWSWrapper.S3
                 }, cancellationToken).EnsureSuccessAsync();
 
 
-        public async Task<S3Object[]> ListObjectsAsync(string bucketName, string prefix, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<S3Object[]> ListObjectsAsync(
+            string bucketName, 
+            string prefix, 
+            int msTimeout = int.MaxValue,
+            CancellationToken cancellationToken = default(CancellationToken))
         {
             ListObjectsResponse response = null;
             var results = new List<S3Object>();
@@ -245,7 +294,7 @@ namespace AWSWrapper.S3
                 BucketName = bucketName,
                 Prefix = prefix,
                 MaxKeys = 100000
-            }, cancellationToken).EnsureSuccessAsync()) != null)
+            }, cancellationToken).Timeout(msTimeout).EnsureSuccessAsync()) != null)
             {
                 if (!response.S3Objects.IsNullOrEmpty())
                     results.AddRange(response.S3Objects);
