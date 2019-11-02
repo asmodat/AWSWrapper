@@ -8,7 +8,6 @@ using System.Text;
 using AsmodatStandard.Extensions;
 using AWSWrapper.KMS;
 using AsmodatStandard.Extensions.Collections;
-using AsmodatStandard.Threading;
 using System.Linq;
 using System;
 using AsmodatStandard.Extensions.Threading;
@@ -16,7 +15,7 @@ using System.Security.Cryptography;
 
 namespace AWSWrapper.S3
 {
-    public static class S3HelperEx
+    public static partial class S3HelperEx
     {
         public static (string bucket, string key) ToBucketKeyPair(this string path)
         {
@@ -66,6 +65,30 @@ namespace AWSWrapper.S3
                 if (ex is Amazon.S3.AmazonS3Exception &&
                    (ex as Amazon.S3.AmazonS3Exception).StatusCode == System.Net.HttpStatusCode.NotFound)
                     return false;
+
+                throw;
+            }
+        }
+
+        public static async Task<GetObjectMetadataResponse> ObjectMetadataAsync(this S3Helper s3,
+            string bucketName,
+            string key,
+            bool throwIfNotFound = true,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            try
+            {
+                var metadata = await s3.GetObjectMetadata(bucketName: bucketName, key: key, cancellationToken: cancellationToken);
+                return metadata;
+            }
+            catch (Exception ex)
+            {
+                if (!throwIfNotFound)
+                {
+                    if (ex is Amazon.S3.AmazonS3Exception &&
+                       (ex as Amazon.S3.AmazonS3Exception).StatusCode == System.Net.HttpStatusCode.NotFound)
+                        return null;
+                }
 
                 throw;
             }

@@ -9,11 +9,77 @@ using System;
 using static AWSWrapper.EC2.EC2Helper;
 using AsmodatStandard.Extensions;
 using Amazon.EC2;
+using AsmodatStandard.Extensions.Net;
+using AsmodatStandard.Extensions.Threading;
 
 namespace AWSWrapper.EC2
 {
     public static class EC2HelperEx
     {
+        public static Task<string> GetEnvironmentRegion(int timeoutSeconds = 5)
+        {
+            var url = "http://169.254.169.254/latest/meta-data/placement/availability-zone";
+            return HttpHelper.GET(url, timeoutSeconds: timeoutSeconds);
+        }
+
+        public static Task<string> GetEnvironmentInstanceId(int timeoutSeconds = 5)
+        {
+            var url = "http://169.254.169.254/latest/meta-data/instance-id";
+            return HttpHelper.GET(url, timeoutSeconds: timeoutSeconds);
+        }
+
+        public static async Task<Dictionary<string, string>> GetEnvironmentTags(
+            string instanceId = null,
+            bool throwIfNotFound = true,
+            int timeoutSeconds = 10)
+        {
+            if(instanceId.IsNullOrEmpty())
+                instanceId = await GetEnvironmentInstanceId(timeoutSeconds: (timeoutSeconds/2));
+
+            //Console.WriteLine($"Fetching tag's from instance {instanceId ?? "undefined"} in region {region ?? "undefined"}");
+            var ec2 = new EC2Helper();
+            var instance = await ec2.GetInstanceById(instanceId: instanceId, throwIfNotFound: throwIfNotFound);
+            
+            return instance?.Tags?.ToDictionary(x => x.Key, y => y.Value);
+        }
+
+        public static async Task<Dictionary<string, string>> TryGetEnvironmentTags(
+            string instanceId = null,
+            bool throwIfNotFound = true,
+            int timeoutSeconds = 10)
+        {
+            try
+            {
+                return await GetEnvironmentTags(
+                    instanceId: instanceId,
+                    throwIfNotFound: throwIfNotFound).Timeout(msTimeout: (timeoutSeconds * 1000));
+            }
+            catch
+            {
+                if (throwIfNotFound)
+                    throw;
+
+                return null;
+            }
+        }
+
+        public static InstanceType ToInstanceType(this string model)
+        {
+            model = model?.ReplaceMany((" ", ""), (".", ""))?.ToLower();
+            if(model.IsNullOrEmpty())
+                throw new Exception($"Model was not defined.");
+
+            var models = EnumEx.ToStringArray<InstanceModel>();
+            foreach(var m in models)
+            {
+                var tmp = m?.ReplaceMany((" ", ""), (".", ""))?.ToLower();
+                if (tmp == model)
+                    return ToInstanceType(EnumEx.ToEnum<InstanceModel>(m));
+            } 
+
+            throw new Exception($"Model '{model}' was not found, should be one of: {models?.JsonSerialize() ?? "undefined"}.");
+        }
+
         public static InstanceType ToInstanceType(this InstanceModel model)
         {
             switch(model)
@@ -32,6 +98,13 @@ namespace AWSWrapper.EC2
                 case InstanceModel.T3Large: return InstanceType.T3Large;
                 case InstanceModel.T3XLarge: return InstanceType.T3Xlarge;
                 case InstanceModel.T32XLarge: return InstanceType.T32xlarge;
+                case InstanceModel.T3aNano: return InstanceType.T3aNano;
+                case InstanceModel.T3aMicro: return InstanceType.T3aMicro;
+                case InstanceModel.T3aSmall: return InstanceType.T3aSmall;
+                case InstanceModel.T3aMedium: return InstanceType.T3aMedium;
+                case InstanceModel.T3aLarge: return InstanceType.T3aLarge;
+                case InstanceModel.T3aXLarge: return InstanceType.T3aXlarge;
+                case InstanceModel.T3a2XLarge: return InstanceType.T3a2xlarge;
                 case InstanceModel.C5Large: return InstanceType.C5Large;
                 case InstanceModel.C5XLarge: return InstanceType.C5Xlarge;
                 case InstanceModel.C52XLarge: return InstanceType.C52xlarge;
@@ -149,5 +222,65 @@ namespace AWSWrapper.EC2
 
         public static Task<DeleteTagsResponse> DeleteAllInstanceTags(this EC2Helper ec2, string instanceId, CancellationToken cancellationToken = default(CancellationToken))
             => ec2.DeleteTagsAsync(new List<string>() { instanceId }, tags: null, cancellationToken: cancellationToken);
+
+
+        public static async Task<Instance> GetInstanceById(this EC2Helper ec2, string instanceId, bool throwIfNotFound = true, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if (instanceId.IsNullOrEmpty())
+                throw new ArgumentException("instanceId was not defined");
+
+            var batch = await ec2.DescribeInstancesAsync(instanceIds: new List<string>() { instanceId }, filters: null, cancellationToken: cancellationToken);
+
+            instanceId = instanceId?.Trim().ToLower();
+            var instance = batch.SelectMany(x => x.Instances).FirstOrDefault(x => x?.InstanceId == instanceId);
+
+            if (throwIfNotFound && instance == null)
+                throw new Exception($"Instance {instanceId ?? "undefined"} was not found.");
+
+            return instance;
+        }
+
+        public static async Task<Instance> GetInstanceByName(this EC2Helper ec2, string instanceName, bool throwIfNotFound = true, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            instanceName = instanceName?.Trim().ToLower();
+
+            if (instanceName.IsNullOrEmpty())
+                throw new ArgumentException("instanceName was not defined");
+
+            var batch = await ec2.DescribeInstancesAsync(cancellationToken: cancellationToken);
+            var instance = batch.SelectMany(x => x.Instances)
+                                .FirstOrDefault(x => !(x?.Tags).IsNullOrEmpty() && 
+                                                x.State.Code != (int)InstanceStateCode.terminated &&
+                                                x.State.Code != (int)InstanceStateCode.terminating &&
+                                                x.Tags.Any(y => !(y?.Key).IsNullOrEmpty() && 
+                                                           y.Key.ToLower().Trim() == "name" && y?.Value?.ToLower()?.Trim() == instanceName));
+
+            if (throwIfNotFound && instance == null)
+                throw new Exception($"Instance {instanceName ?? "undefined"} was not found or is being irreversibly terminated.");
+
+            return instance;
+        }
+
+        /// <summary>
+        /// Removes all tags then adds all tags specified in the dictionary
+        /// </summary>
+        public static async Task<bool> UpdateTagsAsync(this EC2Helper ec2, string instanceId, Dictionary<string, string> tags, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var instance = await ec2.GetInstanceById(instanceId);
+            var deleteTags = await ec2.DeleteAllInstanceTags(instanceId);
+
+            if (tags.IsNullOrEmpty())
+            {
+                instance = await ec2.GetInstanceById(instanceId);
+                return instance.Tags.IsNullOrEmpty();
+            }
+
+            var createTags = await ec2.CreateTagsAsync(
+                resourceIds: new List<string>() { instanceId },
+                tags: tags);
+
+            instance = await ec2.GetInstanceById(instanceId); 
+            return instance.Tags.ToDictionary(x => x.Key, y => y.Value).CollectionEquals(tags, trim: true);
+        }
     }
 }

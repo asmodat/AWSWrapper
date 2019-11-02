@@ -1,21 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;netcoreapp2.1</TargetFrameworks>
+    <TargetFramework>netstandard2.0</TargetFramework>
     <Product>AWSWrapper</Product>
     <Description>Amazon Web Services .NET Standard Extentions</Description>
     <PackageId>Asmodat.AWSWrapper</PackageId>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <PackageReleaseNotes>2018-12-11</PackageReleaseNotes>
-    <Version>1.0.0.32</Version>
+    <PackageReleaseNotes>2019-09-15</PackageReleaseNotes>
+    <Version>1.0.0.63</Version>
     <PackageProjectUrl>https://github.com/asmodat/AWSWrapper</PackageProjectUrl>
     <PackageTags>AWS, Asmodat, Amazon, Amazon SDK Extensions, Amazon SDK, SDK, Extensions, Amazon Web Services</PackageTags>
     <PackageRequireLicenseAcceptance>False</PackageRequireLicenseAcceptance>
     <Company>Asmodat</Company>
     <Authors>Asmodat</Authors>
     <PackageIconUrl>https://avatars3.githubusercontent.com/u/10515811</PackageIconUrl>
-    <AssemblyVersion>1.0.0.32</AssemblyVersion>
-    <FileVersion>1.0.0.32</FileVersion>
+    <AssemblyVersion>1.0.0.63</AssemblyVersion>
+    <FileVersion>1.0.0.63</FileVersion>
     <ApplicationIcon />
     <OutputType>Library</OutputType>
     <StartupObject />
@@ -32,26 +32,27 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.AutoScaling" Version="3.3.8.18" />
-    <PackageReference Include="AWSSDK.AutoScalingPlans" Version="3.3.2.16" />
-    <PackageReference Include="AWSSDK.CertificateManager" Version="3.3.5.50" />
-    <PackageReference Include="AWSSDK.CloudFormation" Version="3.3.13.16" />
-    <PackageReference Include="AWSSDK.CloudWatch" Version="3.3.10.16" />
-    <PackageReference Include="AWSSDK.CloudWatchLogs" Version="3.3.7.16" />
-    <PackageReference Include="AWSSDK.Core" Version="3.3.31.7" />
-    <PackageReference Include="AWSSDK.KeyManagementService" Version="3.3.7.16" />
-    <PackageReference Include="AWSSDK.S3" Version="3.3.31.15" />
-    <PackageReference Include="AWSSDK.EC2" Version="3.3.82" />
-    <PackageReference Include="AWSSDK.ECR" Version="3.3.5.2" />
-    <PackageReference Include="AWSSDK.ECS" Version="3.3.23" />
-    <PackageReference Include="AWSSDK.ElasticLoadBalancing" Version="3.3.3.37" />
-    <PackageReference Include="AWSSDK.ElasticLoadBalancingV2" Version="3.3.13.2" />
-    <PackageReference Include="AWSSDK.IdentityManagement" Version="3.3.9.15" />
-    <PackageReference Include="AWSSDK.ResourceGroups" Version="3.3.3.18" />
-    <PackageReference Include="AWSSDK.Route53" Version="3.3.18.14" />
-    <PackageReference Include="AWSSDK.SecurityToken" Version="3.3.4.50" />
-    <PackageReference Include="AWSSDK.SimpleEmail" Version="3.3.7.30" />
-    <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.3.3.18" />
+    <PackageReference Include="AWSSDK.AutoScaling" Version="3.3.100.81" />
+    <PackageReference Include="AWSSDK.AutoScalingPlans" Version="3.3.100.80" />
+    <PackageReference Include="AWSSDK.CertificateManager" Version="3.3.100.81" />
+    <PackageReference Include="AWSSDK.CloudFormation" Version="3.3.100.80" />
+    <PackageReference Include="AWSSDK.CloudWatch" Version="3.3.102.35" />
+    <PackageReference Include="AWSSDK.CloudWatchLogs" Version="3.3.101.28" />
+    <PackageReference Include="AWSSDK.Core" Version="3.3.103.44" />
+    <PackageReference Include="AWSSDK.KeyManagementService" Version="3.3.101.66" />
+    <PackageReference Include="AWSSDK.S3" Version="3.3.104.32" />
+    <PackageReference Include="AWSSDK.EC2" Version="3.3.131.2" />
+    <PackageReference Include="AWSSDK.ECR" Version="3.3.101.28" />
+    <PackageReference Include="AWSSDK.ECS" Version="3.3.110" />
+    <PackageReference Include="AWSSDK.ElasticLoadBalancing" Version="3.3.100.80" />
+    <PackageReference Include="AWSSDK.ElasticLoadBalancingV2" Version="3.3.102.43" />
+    <PackageReference Include="AWSSDK.IdentityManagement" Version="3.3.103.33" />
+    <PackageReference Include="AWSSDK.ResourceGroups" Version="3.3.101.73" />
+    <PackageReference Include="AWSSDK.Route53" Version="3.3.102.26" />
+    <PackageReference Include="AWSSDK.SecretsManager" Version="3.3.101.30" />
+    <PackageReference Include="AWSSDK.SecurityToken" Version="3.3.102.29" />
+    <PackageReference Include="AWSSDK.SimpleEmail" Version="3.3.101.51" />
+    <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.3.101.69" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
   </ItemGroup>
 

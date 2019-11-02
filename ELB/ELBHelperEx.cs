@@ -152,7 +152,7 @@ namespace AWSWrapper.ELB
                 {
                     tgs = await elbh.DescribeTargetGroupsAsync(loadBalancerArn: null, names: new List<string>() { targetGroupName });
                 }
-                catch (TargetGroupNotFoundException ex)
+                catch (TargetGroupNotFoundException)
                 {
                     return null;
                 }
@@ -220,7 +220,7 @@ namespace AWSWrapper.ELB
                 {
                     return await elbh.DescribeLoadBalancersAsync(new List<string>() { loadBalancerName });
                 }
-                catch (LoadBalancerNotFoundException ex)
+                catch (LoadBalancerNotFoundException)
                 {
                     return new LoadBalancer[0];
                 }
@@ -241,16 +241,6 @@ namespace AWSWrapper.ELB
                 return null;
 
             return await elbh.DescribeTargetGroupsAsync(loadBalancerArn: loadbalancer.LoadBalancerArn, cancellationToken: cancellationToken);
-        }
-
-        public static async Task AttachInstanceToTargetGroupAsync(
-            this ELBHelper elbh,
-            TargetGroup tg,
-            string inst)
-        {
-
-            //elb
-            
         }
     }
 }

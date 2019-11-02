@@ -57,15 +57,25 @@ namespace AWSWrapper.EC2
             T3Large,
             T3XLarge,
             T32XLarge,
+            T3aNano,
+            T3aMicro,
+            T3aSmall,
+            T3aMedium,
+            T3aLarge,
+            T3aXLarge,
+            T3a2XLarge,
             C5Large,
             C5XLarge,
             C52XLarge
         }
 
-        public EC2Helper(int maxDegreeOfParalelism = 2)
+        public EC2Helper(string region = null, int maxDegreeOfParalelism = 2)
         {
             _maxDegreeOfParalelism = maxDegreeOfParalelism;
-            _client = new AmazonEC2Client();
+            if (region.IsNullOrEmpty())
+                _client = new AmazonEC2Client();
+            else
+                _client = new AmazonEC2Client(region: Amazon.RegionEndpoint.GetBySystemName(region));
         }
 
         public async Task<Reservation[]> DescribeInstancesAsync(List<string> instanceIds = null, Dictionary<string, List<string>> filters = null, CancellationToken cancellationToken = default(CancellationToken))
@@ -76,7 +86,6 @@ namespace AWSWrapper.EC2
             var results = new List<Reservation>();
             while ((response = await _client.DescribeInstancesAsync(new DescribeInstancesRequest()
             {
-                MaxResults = 1000,
                 NextToken = response?.NextToken,
                 Filters = filterList,
                 InstanceIds = instanceIds
@@ -144,41 +153,82 @@ namespace AWSWrapper.EC2
         /// For root device naming scheme check: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/device_naming.html
         /// IOPS range: 100-10'000 GP2, 100-20'000 IO1
         /// </summary>
-        public Task<RunInstancesResponse> CreateInstanceAsync(
+        public async Task<RunInstancesResponse> CreateInstanceAsync(
             string imageId,
             InstanceType instanceType,
             string keyName,
-            string securityGroupId,
+            IEnumerable<string> securityGroupIDs,
             string subnetId,
             string roleName,
             ShutdownBehavior shutdownBehavior,
             bool associatePublicIpAddress,
-            Dictionary<string, string> tags,
-            bool EbsOptymalized,
+            IDictionary<string, string> tags,
+            bool ebsOptymalized,
             int rootVolumeSize,
-            string rootDeviceName = "/dev/xvda",
+            string rootDeviceName = "/dev/sd1",
             string rootVolumeType = "GP2",
             string rootSnapshotId = null,
-            int rootIOPS = 3200,
+            int rootIOPS = 100,
+            bool monitoring = false,
+            string kmsKeyId = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            var blockDeviceMappings = new List<BlockDeviceMapping>()
-            {
-                new BlockDeviceMapping()
-                {
-                    DeviceName = rootDeviceName,
-                    Ebs = new EbsBlockDevice()
-                    {
-                        DeleteOnTermination = true,
-                        VolumeType = VolumeType.FindValue(rootVolumeType),
-                        Iops = rootIOPS,
-                        VolumeSize = rootVolumeSize,
-                        SnapshotId = rootSnapshotId,
-                    }
-                }
-            };
+            if (securityGroupIDs.IsNullOrEmpty())
+                throw new Exception($"Paramer '{nameof(securityGroupIDs)}' was not specified, can't create new instance.");
 
-            return _client.RunInstancesAsync(new RunInstancesRequest()
+            var sgrups = new List<string>();
+            var allSGroups = await DescribeSecurityGroupsAsync(cancellationToken: cancellationToken);
+
+            if (!allSGroups.IsNullOrEmpty())
+                foreach (var sg in securityGroupIDs)
+                {
+                    var sgname = sg?.Trim()?.ToLower();
+                    if (sgname.IsNullOrEmpty())
+                        continue;
+
+                    var sgroup = allSGroups.FirstOrDefault(x => x.GroupId == sgname);
+
+                    if (sgroup == null)
+                        sgroup = allSGroups.FirstOrDefault(x => x?.GroupName?.Trim()?.ToLower() == sgname);
+
+                    if (sgroup != null)
+                        sgrups.Add(sgroup.GroupId);
+                }
+
+            sgrups = sgrups.Distinct().ToList();
+            if (sgrups.IsNullOrEmpty())
+                throw new Exception($"No security groups with following names nor id's were found '{securityGroupIDs?.JsonSerialize() ?? "undefined"}'");
+
+            var volumeType = VolumeType.FindValue(rootVolumeType);
+            EbsBlockDevice ebs;
+
+            if(volumeType == VolumeType.Io1)
+            {
+                ebs = new EbsBlockDevice()
+                {
+                    DeleteOnTermination = true,
+                    VolumeType = volumeType,
+                    Iops = rootIOPS,
+                    VolumeSize = rootVolumeSize,
+                    SnapshotId = rootSnapshotId,
+                    Encrypted = !kmsKeyId.IsNullOrEmpty(),
+                    KmsKeyId = kmsKeyId
+                };
+            }
+            else
+            {
+                ebs = new EbsBlockDevice()
+                {
+                    DeleteOnTermination = true,
+                    VolumeType = volumeType,
+                    VolumeSize = rootVolumeSize,
+                    SnapshotId = rootSnapshotId,
+                    Encrypted = !kmsKeyId.IsNullOrEmpty(),
+                    KmsKeyId = kmsKeyId
+                };
+            }
+
+            var result = await _client.RunInstancesAsync(new RunInstancesRequest()
             {
                 ImageId = imageId,
                 InstanceType = instanceType,
@@ -197,7 +247,7 @@ namespace AWSWrapper.EC2
                     {
                         DeviceIndex = 0,
                         SubnetId = subnetId,
-                        Groups = new List<string>() { securityGroupId },
+                        Groups = sgrups,
                         AssociatePublicIpAddress = associatePublicIpAddress,
                         Description = "Primary network interface",
                         DeleteOnTermination = true,
@@ -210,9 +260,21 @@ namespace AWSWrapper.EC2
                         Tags = tags.Select(x => new Tag(){ Key = x.Key, Value = x.Value }).ToList()
                     }
                 },
-                EbsOptimized = EbsOptymalized,
-                BlockDeviceMappings = blockDeviceMappings,
+                EbsOptimized = ebsOptymalized,
+                BlockDeviceMappings = new List<BlockDeviceMapping>() { new BlockDeviceMapping()
+                {
+                        DeviceName = rootDeviceName,
+                        Ebs = ebs,
+                    }
+                },
+                CreditSpecification = new CreditSpecificationRequest()
+                {
+                    CpuCredits = "unlimited"
+                },
+                Monitoring = monitoring,
             }, cancellationToken).EnsureSuccessAsync();
+
+            return result;
         }
 
         public async Task<InstanceStatus> DescribeInstanceStatusAsync(string instanceId, CancellationToken cancellationToken = default(CancellationToken))
@@ -255,5 +317,62 @@ namespace AWSWrapper.EC2
                Resources = resourceIds,
                Tags = tags?.Select(x => new Tag(x.Key, x.Value))?.ToList()
             }, cancellationToken).EnsureSuccessAsync();
+
+        public Task<CreateTagsResponse> CreateTagsAsync(List<string> resourceIds, Dictionary<string, string> tags, CancellationToken cancellationToken = default(CancellationToken))
+            => _client.CreateTagsAsync(new CreateTagsRequest()
+            {
+                Resources = resourceIds,
+                Tags = tags?.Select(x => new Tag(x.Key, x.Value))?.ToList(),
+            }, cancellationToken).EnsureSuccessAsync();
+
+        public Task<ReplaceIamInstanceProfileAssociationResponse> ReplaceIamInstanceProfileAssociationAsync(string associationId, string arn, string name, CancellationToken cancellationToken = default(CancellationToken))
+            => _client.ReplaceIamInstanceProfileAssociationAsync(new ReplaceIamInstanceProfileAssociationRequest
+            {
+                AssociationId = associationId,
+                IamInstanceProfile = new IamInstanceProfileSpecification
+                {
+                    Arn = arn,
+                    Name = name
+                }
+            }, cancellationToken).EnsureSuccessAsync();
+
+        public Task<DeleteSecurityGroupResponse> DeleteSecurityGroupAsync(string group, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var groupId = group.TrimStart("sg-").IsHex() ? group : null;
+            var groupName = groupId == null ? group : null;
+
+            return _client.DeleteSecurityGroupAsync(new DeleteSecurityGroupRequest()
+            {
+                GroupId = groupId,
+                GroupName = groupName,
+            }, cancellationToken).EnsureSuccessAsync();
+        }
+
+        public async Task<SecurityGroup[]> DescribeSecurityGroupsAsync(List<string> groupIds = null, List<string> groupNames = null, Dictionary<string, List<string>> filters = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var filterList = filters?.Select(x => new Filter(x.Key, x.Value)).ToList();
+
+            DescribeSecurityGroupsResponse response = null;
+            var results = new List<SecurityGroup>();
+            while ((response = await _client.DescribeSecurityGroupsAsync(new DescribeSecurityGroupsRequest()
+            {
+                NextToken = response?.NextToken,
+                Filters = filterList,
+                MaxResults = 1000,
+                GroupIds = groupIds,
+                GroupNames = groupNames
+            }, cancellationToken).EnsureSuccessAsync()) != null)
+            {
+                if (!response.SecurityGroups.IsNullOrEmpty())
+                    results.AddRange(response.SecurityGroups);
+
+                if (response.NextToken.IsNullOrEmpty())
+                    break;
+
+                await Task.Delay(100);
+            }
+            
+            return results.ToArray();
+        }
     }
 }
