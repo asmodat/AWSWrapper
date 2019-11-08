@@ -46,9 +46,6 @@ namespace AWSWrapper.Extensions
             return result;
         }
 
-        public static StoredProfileAWSCredentials GetCredentials(string profileName)
-            => new StoredProfileAWSCredentials(profileName);
-
         public static AWSCredentials GetAWSCredentials(string profileName)
         {
             var sharedFile = new SharedCredentialsFile();
