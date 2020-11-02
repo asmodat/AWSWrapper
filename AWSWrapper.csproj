@@ -1,21 +1,21 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <Product>AWSWrapper</Product>
-    <Description>Amazon Web Services .NET Standard Extentions</Description>
+    <Description>Amazon Web Services .NET Standard Extensions</Description>
     <PackageId>Asmodat.AWSWrapper</PackageId>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <PackageReleaseNotes>2019-09-15</PackageReleaseNotes>
-    <Version>1.0.0.63</Version>
+    <PackageReleaseNotes>2019-11-08</PackageReleaseNotes>
+    <Version>1.0.0.71</Version>
     <PackageProjectUrl>https://github.com/asmodat/AWSWrapper</PackageProjectUrl>
     <PackageTags>AWS, Asmodat, Amazon, Amazon SDK Extensions, Amazon SDK, SDK, Extensions, Amazon Web Services</PackageTags>
     <PackageRequireLicenseAcceptance>False</PackageRequireLicenseAcceptance>
     <Company>Asmodat</Company>
     <Authors>Asmodat</Authors>
     <PackageIconUrl>https://avatars3.githubusercontent.com/u/10515811</PackageIconUrl>
-    <AssemblyVersion>1.0.0.63</AssemblyVersion>
-    <FileVersion>1.0.0.63</FileVersion>
+    <AssemblyVersion>1.0.0.71</AssemblyVersion>
+    <FileVersion>1.0.0.71</FileVersion>
     <ApplicationIcon />
     <OutputType>Library</OutputType>
     <StartupObject />

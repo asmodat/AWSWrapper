@@ -187,6 +187,28 @@ namespace AWSWrapper.Route53
             return cname;
         }
 
+        public static async Task<string> UpsertARecordAsync(this Route53Helper r53h,
+            string zoneId,
+            string name,
+            string value,
+            int ttl = 0,
+            string failover = null,
+            string healthCheckId = null,
+            string setIdentifier = null)
+        {
+            var zone = await r53h.GetHostedZoneAsync(zoneId);
+            var cname = $"{name}.{zone.HostedZone.Name.TrimEnd('.')}";
+            await r53h.UpsertRecordAsync(zoneId,
+                 cname,
+                 value,
+                 RRType.A,
+                 ttl,
+                 failover,
+                 healthCheckId,
+                 setIdentifier);
+            return cname;
+        }
+
         public static async Task<Dictionary<HostedZone, ResourceRecordSet[]>> GetRecordSets(this Route53Helper r53h, CancellationToken cancellationToken = default(CancellationToken))
         {
             var zones = await r53h.ListHostedZonesAsync(cancellationToken);

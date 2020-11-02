@@ -150,17 +150,22 @@ namespace AWSWrapper.S3
             string key,
             string version = null,
             string eTag = null,
+            bool throwIfNotFound = true,
             Encoding encoding = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            var obj = await s3.GetObjectAsync(
+            var stream = await s3.DownloadObjectAsync(
                 bucketName: bucketName,
                 key: key,
-                versionId: version,
+                version: version,
                 eTag: eTag,
+                throwIfNotFound: throwIfNotFound,
                 cancellationToken: cancellationToken);
 
-            return (encoding ?? Encoding.UTF8).GetString(obj.ResponseStream.ToArray(bufferSize: 256 * 1024));
+            if (!throwIfNotFound && stream == null)
+                return null;
+
+            return (encoding ?? Encoding.UTF8).GetString(stream.ToArray(bufferSize: 256 * 1024));
         }
 
         public static async Task<FileInfo> DownloadObjectAsync(this S3Helper s3,
@@ -254,8 +259,10 @@ namespace AWSWrapper.S3
                 => s3.UploadStreamAsync(bucketName: bucketName,
                 key: key,
                 inputStream: text.ToMemoryStream(encoding),
-                contentType: "plain/text",
+                contentType: "text/plain",
                 cancellationToken: cancellationToken);
+
+        
 
         public static Task<string> UploadJsonAsync<T>(this S3Helper s3,
             string bucketName,
@@ -268,7 +275,7 @@ namespace AWSWrapper.S3
                 => s3.UploadStreamAsync(bucketName: bucketName,
                 key: key,
                 inputStream: content.JsonSerialize(formatting).ToMemoryStream(encoding),
-                contentType: "plain/text",
+                contentType: "text/plain",
                 cancellationToken: cancellationToken);
 
         public static async Task<string> UploadStreamAsync(this S3Helper s3,
@@ -316,7 +323,7 @@ namespace AWSWrapper.S3
                 UpdateCancellationToken();
                 using (var ms = blob.CopyToMemoryStream(bufferSize: (int)blob.Length))
                 {
-                    var spResult = s3.PutObjectAsync(bucketName: bucketName, key: key, inputStream: ms, keyId: keyId, cancellationToken: ct)
+                    var spResult = s3.PutObjectAsync(bucketName: bucketName, key: key, inputStream: ms, keyId: keyId, cancellationToken: ct, contentType: contentType)
                         .TryCancelAfter(ct, msTimeout: msTimeout);
 
                     blob.Seek(0, SeekOrigin.Begin);
@@ -329,7 +336,7 @@ namespace AWSWrapper.S3
             }
 
             UpdateCancellationToken();
-            var init = await s3.InitiateMultipartUploadAsync(bucketName, key, contentType, keyId: keyId, cancellationToken: ct)
+            var init = await s3.InitiateMultipartUploadAsync(bucketName, key, contentType: contentType, keyId: keyId, cancellationToken: ct)
                 .TryCancelAfter(ct, msTimeout: msTimeout);
             var partNumber = 0;
             var tags = new List<PartETag>();

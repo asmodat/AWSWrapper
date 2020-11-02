@@ -207,6 +207,7 @@ namespace AWSWrapper.S3
             string bucketName,
             string key,
             Stream inputStream,
+            string contentType,
             string keyId = null,
             Action<object, StreamTransferProgressArgs> progress = null,
             CancellationToken cancellationToken = default(CancellationToken))
@@ -219,13 +220,15 @@ namespace AWSWrapper.S3
                 {
                     BucketName = bucketName,
                     Key = key,
-                    InputStream = inputStream
+                    InputStream = inputStream,
+                    ContentType = contentType
                 } : new PutObjectRequest()
                 {
                     BucketName = bucketName,
                     Key = key,
                     InputStream = inputStream,
                     ServerSideEncryptionKeyManagementServiceKeyId = keyId,
+                    ContentType = contentType,
                     ServerSideEncryptionMethod = ServerSideEncryptionMethod.AWSKMS
                 };
 
