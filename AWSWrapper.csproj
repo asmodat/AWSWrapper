@@ -53,7 +53,7 @@
     <PackageReference Include="AWSSDK.SecurityToken" Version="3.3.102.29" />
     <PackageReference Include="AWSSDK.SimpleEmail" Version="3.3.101.51" />
     <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.3.101.69" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
   </ItemGroup>
 
   <ItemGroup>
